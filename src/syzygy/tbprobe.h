@@ -1,14 +1,15 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
-  Copyright (c) 2013 Ronald de Man
-  Copyright (C) 2016-2020 Marco Costalba, Lucas Braesch
+  Fishmill, a UCI chess playing engine derived from Stockfish
+  Copyright (c) 2013 Ronald de Man (Stockfish author)
+  Copyright (C) 2016-2020 Marco Costalba, Lucas Braesch (Stockfish author)
+  Copyright (C) 2020 Calcitem <calcitem@outlook.com>
 
-  Stockfish is free software: you can redistribute it and/or modify
+  Fishmill is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  Fishmill is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.

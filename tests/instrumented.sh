@@ -73,15 +73,18 @@ for args in "eval" \
             "bench 128 $threads 10 default depth"
 do
 
-   echo "$prefix $exeprefix ./stockfish $args $postfix"
-   eval "$prefix $exeprefix ./stockfish $args $postfix"
+   echo "$prefix $exeprefix ./fishmill $args $postfix"
+   eval "$prefix $exeprefix ./fishmill $args $postfix"
 
 done
+
+# TODO
+exit
 
 # more general testing, following an uci protocol exchange
 cat << EOF > game.exp
  set timeout 10
- spawn $exeprefix ./stockfish
+ spawn $exeprefix ./fishmill
 
  send "uci\n"
  expect "uciok"
@@ -117,7 +120,7 @@ fi
 
 cat << EOF > syzygy.exp
  set timeout 240
- spawn $exeprefix ./stockfish
+ spawn $exeprefix ./fishmill
  send "uci\n"
  send "setoption name SyzygyPath value ../tests/syzygy/\n"
  expect "info string Found 35 tablebases" {} timeout {exit 1}
