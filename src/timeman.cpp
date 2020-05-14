@@ -83,10 +83,10 @@ namespace {
 
 void TimeManagement::init(Search::LimitsType& limits, Color us, int ply) {
 
-  TimePoint minThinkingTime = Options["Minimum Thinking Time"];
-  TimePoint moveOverhead    = Options["Move Overhead"];
-  TimePoint slowMover       = Options["Slow Mover"];
-  TimePoint npmsec          = Options["nodestime"];
+  TimePoint minThinkingTime = (TimePoint)Options["Minimum Thinking Time"];
+  TimePoint moveOverhead    = (TimePoint)Options["Move Overhead"];
+  TimePoint slowMover       = (TimePoint)Options["Slow Mover"];
+  TimePoint npmsec          = (TimePoint)Options["nodestime"];
   TimePoint hypMyTime;
 
   // If we have to play in 'nodes as time' mode, then convert from time

@@ -274,7 +274,7 @@ void MainThread::search() {
   // Check if there are threads with a better score than main thread
   if (    Options["MultiPV"] == 1
       && !Limits.depth
-      && !(Skill(Options["Skill Level"]).enabled() || Options["UCI_LimitStrength"])
+      && !(Skill((int)Options["Skill Level"]).enabled() || Options["UCI_LimitStrength"])
       &&  rootMoves[0].pv[0] != MOVE_NONE)
   {
       std::map<Move, int64_t> votes;
@@ -357,7 +357,7 @@ void Thread::search() {
               mainThread->iterValue[i] = mainThread->bestPreviousScore;
   }
 
-  size_t multiPV = Options["MultiPV"];
+  size_t multiPV = (size_t)Options["MultiPV"];
 
   // Pick integer skill levels, but non-deterministically round up or down
   // such that the average integer skill corresponds to the input floating point one.

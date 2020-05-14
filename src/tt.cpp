@@ -94,7 +94,7 @@ void TranspositionTable::clear() {
               WinProcGroup::bindThisThread(idx);
 
           // Each thread will zero its part of the hash table
-          const size_t stride = clusterCount / Options["Threads"],
+          const size_t stride = clusterCount / (size_t)Options["Threads"],
                        start  = stride * idx,
                        len    = idx != Options["Threads"] - 1 ?
                                 stride : clusterCount - start;

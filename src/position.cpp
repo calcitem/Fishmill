@@ -1042,7 +1042,8 @@ bool Position::see_ge(Move m, Value threshold) const {
       attackers &= occupied;
 
       // If stm has no more attackers then give up: stm loses
-      if (!(stmAttackers = attackers & pieces(stm)))
+      stmAttackers = attackers & pieces(stm);
+      if (!stmAttackers)
           break;
 
       // Don't allow pinned pieces to attack (except the king) as long as
