@@ -124,7 +124,6 @@ enum Move : int {
 
 enum MoveType {
   NORMAL,
-  PROMOTION = 1 << 14,
   ENPASSANT = 2 << 14
 };
 
@@ -421,10 +420,6 @@ constexpr int from_to(Move m) {
 
 constexpr MoveType type_of(Move m) {
   return MoveType(m & (3 << 14));
-}
-
-constexpr PieceType promotion_type(Move m) {
-  return PieceType(((m >> 12) & 3) + KNIGHT);
 }
 
 constexpr Move make_move(Square from, Square to) {

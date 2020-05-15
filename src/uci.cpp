@@ -298,9 +298,6 @@ string UCI::move(Move m, bool chess960) {
 
   string move = UCI::square(from) + UCI::square(to);
 
-  if (type_of(m) == PROMOTION)
-      move += " pnbrqk"[promotion_type(m)];
-
   return move;
 }
 

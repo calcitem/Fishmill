@@ -116,14 +116,6 @@ namespace {
         || (stm == WHITE && (PawnAttacks[WHITE][psq] & ksq[BLACK])))
         result = INVALID;
 
-    // Immediate win if a pawn can be promoted without getting captured
-    else if (   stm == WHITE
-             && rank_of(psq) == RANK_7
-             && ksq[stm] != psq + NORTH
-             && (    distance(ksq[~stm], psq + NORTH) > 1
-                 || (PseudoAttacks[KING][ksq[stm]] & (psq + NORTH))))
-        result = WIN;
-
     // Immediate draw if it is a stalemate or a king captures undefended pawn
     else if (   stm == BLACK
              && (  !(PseudoAttacks[KING][ksq[stm]] & ~(PseudoAttacks[KING][ksq[~stm]] | PawnAttacks[~stm][psq]))

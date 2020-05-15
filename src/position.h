@@ -115,8 +115,6 @@ public:
   bool legal(Move m) const;
   bool pseudo_legal(const Move m) const;
   bool capture(Move m) const;
-  bool capture_or_promotion(Move m) const;
-  bool gives_check(Move m) const;
   bool advanced_pawn_push(Move m) const;
   Piece moved_piece(Move m) const;
   Piece captured_piece() const;
@@ -128,7 +126,6 @@ public:
 
   // Doing and undoing moves
   void do_move(Move m, StateInfo& newSt);
-  void do_move(Move m, StateInfo& newSt, bool givesCheck);
   void undo_move(Move m);
   void do_null_move(StateInfo& newSt);
   void undo_null_move();
@@ -345,11 +342,6 @@ inline bool Position::is_chess960() const {
   return chess960;
 }
 
-inline bool Position::capture_or_promotion(Move m) const {
-  assert(is_ok(m));
-  return type_of(m) != NORMAL ? true : !empty(to_sq(m));
-}
-
 inline bool Position::capture(Move m) const {
   assert(is_ok(m));
   // Castling is encoded as "king captures rook"
@@ -409,10 +401,6 @@ inline void Position::move_piece(Square from, Square to) {
   index[to] = index[from];
   pieceList[pc][index[to]] = to;
   psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
-}
-
-inline void Position::do_move(Move m, StateInfo& newSt) {
-  do_move(m, newSt, gives_check(m));
 }
 
 #endif // #ifndef POSITION_H_INCLUDED
