@@ -746,8 +746,7 @@ namespace {
 
         if (    piecesCount <= TB::Cardinality
             && (piecesCount <  TB::Cardinality || depth >= TB::ProbeDepth)
-            &&  pos.rule50_count() == 0
-            && !pos.can_castle(ANY_CASTLING))
+            &&  pos.rule50_count() == 0)
         {
             TB::ProbeState err;
             TB::WDLScore wdl = Tablebases::probe_wdl(pos, &err);
@@ -1127,10 +1126,6 @@ moves_loop: // When in check, search starts from here
       // Last captures extension
       else if (   PieceValue[EG][pos.captured_piece()] > PawnValueEg
                && pos.non_pawn_material() <= 2 * RookValueMg)
-          extension = 1;
-
-      // Castling extension
-      if (type_of(move) == CASTLING)
           extension = 1;
 
       // Late irreversible move extension
@@ -1924,7 +1919,7 @@ void Tablebases::rank_root_moves(Position& pos, Search::RootMoves& rootMoves) {
         ProbeDepth = 0;
     }
 
-    if (Cardinality >= popcount(pos.pieces()) && !pos.can_castle(ANY_CASTLING))
+    if (Cardinality >= popcount(pos.pieces()))
     {
         // Rank moves using DTZ tables
         RootInTB = root_probe(pos, rootMoves);

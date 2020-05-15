@@ -41,7 +41,6 @@ struct StateInfo {
   Key    pawnKey;
   Key    materialKey;
   Value  nonPawnMaterial[COLOR_NB];
-  int    castlingRights;
   int    rule50;
   int    pliesFromNull;
   Square epSquare;
@@ -97,12 +96,6 @@ public:
   template<PieceType Pt> const Square* squares(Color c) const;
   template<PieceType Pt> Square square(Color c) const;
   bool is_on_semiopen_file(Color c, Square s) const;
-
-  // Castling
-  int castling_rights(Color c) const;
-  bool can_castle(CastlingRights cr) const;
-  bool castling_impeded(CastlingRights cr) const;
-  Square castling_rook_square(CastlingRights cr) const;
 
   // Checking
   Bitboard checkers() const;
@@ -168,7 +161,6 @@ public:
 
 private:
   // Initialization helpers (used while setting up a position)
-  void set_castling_right(Color c, Square rfrom);
   void set_state(StateInfo* si) const;
   void set_check_info(StateInfo* si) const;
 
@@ -176,8 +168,6 @@ private:
   void put_piece(Piece pc, Square s);
   void remove_piece(Square s);
   void move_piece(Square from, Square to);
-  template<bool Do>
-  void do_castling(Color us, Square from, Square& to, Square& rfrom, Square& rto);
 
   // Data members
   Piece board[SQUARE_NB];
@@ -186,9 +176,6 @@ private:
   int pieceCount[PIECE_NB];
   Square pieceList[PIECE_NB][16];
   int index[SQUARE_NB];
-  int castlingRightsMask[SQUARE_NB];
-  Square castlingRookSquare[CASTLING_RIGHT_NB];
-  Bitboard castlingPath[CASTLING_RIGHT_NB];
   int gamePly;
   Color sideToMove;
   Score psq;
@@ -263,26 +250,6 @@ inline Square Position::ep_square() const {
 
 inline bool Position::is_on_semiopen_file(Color c, Square s) const {
   return !(pieces(c, PAWN) & file_bb(s));
-}
-
-inline bool Position::can_castle(CastlingRights cr) const {
-  return st->castlingRights & cr;
-}
-
-inline int Position::castling_rights(Color c) const {
-  return c & CastlingRights(st->castlingRights);
-}
-
-inline bool Position::castling_impeded(CastlingRights cr) const {
-  assert(cr == WHITE_OO || cr == WHITE_OOO || cr == BLACK_OO || cr == BLACK_OOO);
-
-  return pieces() & castlingPath[cr];
-}
-
-inline Square Position::castling_rook_square(CastlingRights cr) const {
-  assert(cr == WHITE_OO || cr == WHITE_OOO || cr == BLACK_OO || cr == BLACK_OOO);
-
-  return castlingRookSquare[cr];
 }
 
 template<PieceType Pt>
@@ -380,13 +347,13 @@ inline bool Position::is_chess960() const {
 
 inline bool Position::capture_or_promotion(Move m) const {
   assert(is_ok(m));
-  return type_of(m) != NORMAL ? type_of(m) != CASTLING : !empty(to_sq(m));
+  return type_of(m) != NORMAL ? true : !empty(to_sq(m));
 }
 
 inline bool Position::capture(Move m) const {
   assert(is_ok(m));
   // Castling is encoded as "king captures rook"
-  return (!empty(to_sq(m)) && type_of(m) != CASTLING) || type_of(m) == ENPASSANT;
+  return (!empty(to_sq(m)) && true || type_of(m) == ENPASSANT);
 }
 
 inline Piece Position::captured_piece() const {
