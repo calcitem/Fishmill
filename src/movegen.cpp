@@ -30,17 +30,7 @@ namespace {
   ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Color us,
                           Bitboard target) {
 
-    static_assert(Pt != KING && Pt != PAWN, "Unsupported piece type in generate_moves()");
-
-    const Square* pl = pos.squares<Pt>(us);
-
-    for (Square from = *pl; from != SQ_NONE; from = *++pl)
-    {
-        Bitboard b = pos.attacks_from<Pt>(from) & target;
-
-        while (b)
-            *moveList++ = make_move(from, pop_lsb(&b));
-    }
+    /* TODO */
 
     return moveList;
   }
@@ -54,13 +44,6 @@ namespace {
     moveList = generate_moves<BISHOP, Checks>(pos, moveList, Us, target);
     moveList = generate_moves<  ROOK, Checks>(pos, moveList, Us, target);
     moveList = generate_moves< QUEEN, Checks>(pos, moveList, Us, target);
-
-    {
-        Square ksq = pos.square<KING>(Us);
-        Bitboard b = pos.attacks_from<KING>(ksq) & target;
-        while (b)
-            *moveList++ = make_move(ksq, pop_lsb(&b));
-    }
 
     return moveList;
   }

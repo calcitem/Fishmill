@@ -56,17 +56,6 @@ namespace {
 
   Result& operator|=(Result& r, Result v) { return r = Result(r | v); }
 
-  struct KPKPosition {
-    KPKPosition() = default;
-    explicit KPKPosition(unsigned idx);
-    operator Result() const { return result; }
-    Result classify(const std::vector<KPKPosition>& db);
-
-    Color stm;
-    Square ksq[COLOR_NB], psq;
-    Result result;
-  };
-
 } // namespace
 
 
@@ -80,86 +69,6 @@ bool Bitbases::probe(Square wksq, Square wpsq, Square bksq, Color stm) {
 
 void Bitbases::init() {
 
-  std::vector<KPKPosition> db(MAX_INDEX);
-  unsigned idx, repeat = 1;
+  /* TODO */
 
-  // Initialize db with known win / draw positions
-  for (idx = 0; idx < MAX_INDEX; ++idx)
-      db[idx] = KPKPosition(idx);
-
-  // Iterate through the positions until none of the unknown positions can be
-  // changed to either wins or draws (15 cycles needed).
-  while (repeat)
-      for (repeat = idx = 0; idx < MAX_INDEX; ++idx)
-          repeat |= (db[idx] == UNKNOWN && db[idx].classify(db) != UNKNOWN);
-
-  // Fill the bitbase with the decisive results
-  for (idx = 0; idx < MAX_INDEX; ++idx)
-      if (db[idx] == WIN)
-          KPKBitbase.set(idx);
 }
-
-
-namespace {
-
-  KPKPosition::KPKPosition(unsigned idx) {
-
-    ksq[WHITE] = Square((idx >>  0) & 0x3F);
-    ksq[BLACK] = Square((idx >>  6) & 0x3F);
-    stm        = Color ((idx >> 12) & 0x01);
-    psq        = make_square(File((idx >> 13) & 0x3), Rank(RANK_7 - ((idx >> 15) & 0x7)));
-
-    // Check if two pieces are on the same square or if a king can be captured
-    if (   distance(ksq[WHITE], ksq[BLACK]) <= 1
-        || ksq[WHITE] == psq
-        || ksq[BLACK] == psq
-        || (stm == WHITE && (PawnAttacks[WHITE][psq] & ksq[BLACK])))
-        result = INVALID;
-
-    // Immediate draw if it is a stalemate or a king captures undefended pawn
-    else if (   stm == BLACK
-             && (  !(PseudoAttacks[KING][ksq[stm]] & ~(PseudoAttacks[KING][ksq[~stm]] | PawnAttacks[~stm][psq]))
-                 || (PseudoAttacks[KING][ksq[stm]] & psq & ~PseudoAttacks[KING][ksq[~stm]])))
-        result = DRAW;
-
-    // Position will be classified later
-    else
-        result = UNKNOWN;
-  }
-
-  Result KPKPosition::classify(const std::vector<KPKPosition>& db) {
-
-    // White to move: If one move leads to a position classified as WIN, the result
-    // of the current position is WIN. If all moves lead to positions classified
-    // as DRAW, the current position is classified as DRAW, otherwise the current
-    // position is classified as UNKNOWN.
-    //
-    // Black to move: If one move leads to a position classified as DRAW, the result
-    // of the current position is DRAW. If all moves lead to positions classified
-    // as WIN, the position is classified as WIN, otherwise the current position is
-    // classified as UNKNOWN.
-    const Result Good = (stm == WHITE ? WIN   : DRAW);
-    const Result Bad  = (stm == WHITE ? DRAW  : WIN);
-
-    Result r = INVALID;
-    Bitboard b = PseudoAttacks[KING][ksq[stm]];
-
-    while (b)
-        r |= stm == WHITE ? db[index(BLACK, ksq[BLACK] , pop_lsb(&b), psq)]
-                          : db[index(WHITE, pop_lsb(&b),  ksq[WHITE], psq)];
-
-    if (stm == WHITE)
-    {
-        if (rank_of(psq) < RANK_7)      // Single push
-            r |= db[index(BLACK, ksq[BLACK], ksq[WHITE], psq + NORTH)];
-
-        if (   rank_of(psq) == RANK_2   // Double push
-            && psq + NORTH != ksq[WHITE]
-            && psq + NORTH != ksq[BLACK])
-            r |= db[index(BLACK, ksq[BLACK], ksq[WHITE], psq + NORTH + NORTH)];
-    }
-
-    return result = r & Good  ? Good  : r & UNKNOWN ? UNKNOWN : Bad;
-  }
-
-} // namespace

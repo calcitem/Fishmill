@@ -81,31 +81,6 @@ extern Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
 extern Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 
 
-/// Magic holds all magic bitboards relevant data for a single square
-struct Magic {
-  Bitboard  mask;
-  Bitboard  magic;
-  Bitboard* attacks;
-  unsigned  shift;
-
-  // Compute the attack's index using the 'magic bitboards' approach
-  unsigned index(Bitboard occupied) const {
-
-    if (HasPext)
-        return unsigned(pext(occupied, mask));
-
-    if (Is64Bit)
-        return unsigned(((occupied & mask) * magic) >> shift);
-
-    unsigned lo = unsigned(occupied) & unsigned(mask);
-    unsigned hi = unsigned(occupied >> 32) & unsigned(mask >> 32);
-    return (lo * unsigned(magic) ^ hi * unsigned(magic >> 32)) >> shift;
-  }
-};
-
-extern Magic RookMagics[SQUARE_NB];
-extern Magic BishopMagics[SQUARE_NB];
-
 inline Bitboard square_bb(Square s) {
   assert(is_ok(s));
   return SquareBB[s];
@@ -168,26 +143,6 @@ constexpr Bitboard shift(Bitboard b) {
 }
 
 
-/// pawn_attacks_bb() returns the squares attacked by pawns of the given color
-/// from the squares in the given bitboard.
-
-template<Color C>
-constexpr Bitboard pawn_attacks_bb(Bitboard b) {
-  return C == WHITE ? shift<NORTH_WEST>(b) | shift<NORTH_EAST>(b)
-                    : shift<SOUTH_WEST>(b) | shift<SOUTH_EAST>(b);
-}
-
-
-/// pawn_double_attacks_bb() returns the squares doubly attacked by pawns of the
-/// given color from the squares in the given bitboard.
-
-template<Color C>
-constexpr Bitboard pawn_double_attacks_bb(Bitboard b) {
-  return C == WHITE ? shift<NORTH_WEST>(b) & shift<NORTH_EAST>(b)
-                    : shift<SOUTH_WEST>(b) & shift<SOUTH_EAST>(b);
-}
-
-
 /// adjacent_files_bb() returns a bitboard representing all the squares on the
 /// adjacent files of the given one.
 
@@ -223,23 +178,6 @@ inline Bitboard forward_file_bb(Color c, Square s) {
 }
 
 
-/// pawn_attack_span() returns a bitboard representing all the squares that can
-/// be attacked by a pawn of the given color when it moves along its file,
-/// starting from the given square.
-
-inline Bitboard pawn_attack_span(Color c, Square s) {
-  return forward_ranks_bb(c, s) & adjacent_files_bb(s);
-}
-
-
-/// passed_pawn_span() returns a bitboard which can be used to test if a pawn of
-/// the given color and on the given square is a passed pawn.
-
-inline Bitboard passed_pawn_span(Color c, Square s) {
-  return forward_ranks_bb(c, s) & (adjacent_files_bb(s) | file_bb(s));
-}
-
-
 /// aligned() returns true if the squares s1, s2 and s3 are aligned either on a
 /// straight or on a diagonal line.
 
@@ -265,29 +203,6 @@ inline Bitboard safe_destination(Square s, int step)
 {
     Square to = Square(s + step);
     return is_ok(to) && distance(s, to) <= 2 ? square_bb(to) : Bitboard(0);
-}
-
-/// attacks_bb() returns a bitboard representing all the squares attacked by a
-/// piece of type Pt (bishop or rook) placed on 's'.
-
-template<PieceType Pt>
-inline Bitboard attacks_bb(Square s, Bitboard occupied) {
-
-  const Magic& m = Pt == ROOK ? RookMagics[s] : BishopMagics[s];
-  return m.attacks[m.index(occupied)];
-}
-
-inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
-
-  assert(pt != PAWN);
-
-  switch (pt)
-  {
-  case BISHOP: return attacks_bb<BISHOP>(s, occupied);
-  case ROOK  : return attacks_bb<  ROOK>(s, occupied);
-  case QUEEN : return attacks_bb<BISHOP>(s, occupied) | attacks_bb<ROOK>(s, occupied);
-  default    : return PseudoAttacks[pt][s];
-  }
 }
 
 

@@ -97,14 +97,6 @@ public:
   template<PieceType Pt> Square square(Color c) const;
   bool is_on_semiopen_file(Color c, Square s) const;
 
-  // Attacks to/from a given square
-  Bitboard attackers_to(Square s) const;
-  Bitboard attackers_to(Square s, Bitboard occupied) const;
-  Bitboard attacks_from(PieceType pt, Square s) const;
-  template<PieceType> Bitboard attacks_from(Square s) const;
-  template<PieceType> Bitboard attacks_from(Square s, Color c) const;
-  Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard& pinners) const;
-
   // Properties of moves
   bool legal(Move m) const;
   bool pseudo_legal(const Move m) const;
@@ -146,7 +138,6 @@ public:
 private:
   // Initialization helpers (used while setting up a position)
   void set_state(StateInfo* si) const;
-  void set_check_info(StateInfo* si) const;
 
   // Other helpers
   void put_piece(Piece pc, Square s);
@@ -233,28 +224,6 @@ inline Square Position::ep_square() const {
 
 inline bool Position::is_on_semiopen_file(Color c, Square s) const {
   return !(pieces(c, PAWN) & file_bb(s));
-}
-
-template<PieceType Pt>
-inline Bitboard Position::attacks_from(Square s) const {
-  static_assert(Pt != PAWN, "Pawn attacks need color");
-
-  return  Pt == BISHOP || Pt == ROOK ? attacks_bb<Pt>(s, pieces())
-        : Pt == QUEEN  ? attacks_from<ROOK>(s) | attacks_from<BISHOP>(s)
-        : PseudoAttacks[Pt][s];
-}
-
-template<>
-inline Bitboard Position::attacks_from<PAWN>(Square s, Color c) const {
-  return PawnAttacks[c][s];
-}
-
-inline Bitboard Position::attacks_from(PieceType pt, Square s) const {
-  return attacks_bb(pt, s, pieces());
-}
-
-inline Bitboard Position::attackers_to(Square s) const {
-  return attackers_to(s, pieces());
 }
 
 inline Key Position::key() const {

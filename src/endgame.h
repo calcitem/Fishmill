@@ -85,8 +85,6 @@ struct EndgameBase {
 template<EndgameCode E, typename T = eg_type<E>>
 struct Endgame : public EndgameBase<T> {
 
-  explicit Endgame(Color c) : EndgameBase<T>(c) {}
-  T operator()(const Position&) const override;
 };
 
 
@@ -110,10 +108,6 @@ namespace Endgames {
 
   template<EndgameCode E, typename T = eg_type<E>>
   void add(const std::string& code) {
-
-    StateInfo st;
-    map<T>()[Position().set(code, WHITE, &st).material_key()] = Ptr<T>(new Endgame<E>(WHITE));
-    map<T>()[Position().set(code, BLACK, &st).material_key()] = Ptr<T>(new Endgame<E>(BLACK));
   }
 
   template<typename T>
