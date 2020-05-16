@@ -27,9 +27,8 @@ namespace {
 
   enum Stages {
     MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
-    EVASION_TT, EVASION_INIT, EVASION,
     PROBCUT_TT, PROBCUT_INIT, PROBCUT,
-    QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
+    QSEARCH_TT, QCAPTURE_INIT, QCAPTURE
   };
 
   // partial_insertion_sort() sorts moves in descending order up to and including
@@ -64,7 +63,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
 
   assert(d > 0);
 
-  stage = (pos.checkers() ? EVASION_TT : MAIN_TT) +
+  stage = (MAIN_TT) +
           !(ttm && pos.pseudo_legal(ttm));
 }
 
@@ -75,7 +74,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
 
   assert(d <= 0);
 
-  stage = (pos.checkers() ? EVASION_TT : QSEARCH_TT) +
+  stage = (QSEARCH_TT) +
            !(ttm && (depth > DEPTH_QS_RECAPTURES || to_sq(ttm) == recaptureSquare)
                  && pos.pseudo_legal(ttm));
 }
@@ -84,8 +83,6 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
 /// than or equal to the given threshold.
 MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePieceToHistory* cph)
            : pos(p), captureHistory(cph), ttMove(ttm), threshold(th) {
-
-  assert(!pos.checkers());
 
   stage = PROBCUT_TT + !(ttm && pos.capture(ttm)
                              && pos.pseudo_legal(ttm)
@@ -98,7 +95,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 template<GenType Type>
 void MovePicker::score() {
 
-  static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
+  static_assert(Type == CAPTURES || Type == QUIETS, "Wrong type");
 
   for (auto& m : *this)
       if (Type == CAPTURES)
@@ -113,16 +110,6 @@ void MovePicker::score() {
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
                    + (ply < MAX_LPH ?  4 * (*lowPlyHistory)[ply][from_to(m)] : 0);
 
-      else // Type == EVASIONS
-      {
-          if (pos.capture(m))
-              m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-                       - Value(type_of(pos.moved_piece(m)));
-          else
-              m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
-                       + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
-                       - (1 << 28);
-      }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -152,7 +139,6 @@ top:
   switch (stage) {
 
   case MAIN_TT:
-  case EVASION_TT:
   case QSEARCH_TT:
   case PROBCUT_TT:
       ++stage;
@@ -225,17 +211,6 @@ top:
   case BAD_CAPTURE:
       return select<Next>([](){ return true; });
 
-  case EVASION_INIT:
-      cur = moves;
-      endMoves = generate<EVASIONS>(pos, cur);
-
-      score<EVASIONS>();
-      ++stage;
-      /* fallthrough */
-
-  case EVASION:
-      return select<Best>([](){ return true; });
-
   case PROBCUT:
       return select<Best>([&](){ return pos.see_ge(*cur, threshold); });
 
@@ -250,16 +225,6 @@ top:
 
       ++stage;
       /* fallthrough */
-
-  case QCHECK_INIT:
-      cur = moves;
-      endMoves = generate<QUIET_CHECKS>(pos, cur);
-
-      ++stage;
-      /* fallthrough */
-
-  case QCHECK:
-      return select<Next>([](){ return true; });
   }
 
   assert(false);

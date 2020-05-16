@@ -97,12 +97,6 @@ public:
   template<PieceType Pt> Square square(Color c) const;
   bool is_on_semiopen_file(Color c, Square s) const;
 
-  // Checking
-  Bitboard checkers() const;
-  Bitboard blockers_for_king(Color c) const;
-  Bitboard check_squares(PieceType pt) const;
-  bool is_discovery_check_on_king(Color c, Move m) const;
-
   // Attacks to/from a given square
   Bitboard attackers_to(Square s) const;
   Bitboard attackers_to(Square s, Bitboard occupied) const;
@@ -261,22 +255,6 @@ inline Bitboard Position::attacks_from(PieceType pt, Square s) const {
 
 inline Bitboard Position::attackers_to(Square s) const {
   return attackers_to(s, pieces());
-}
-
-inline Bitboard Position::checkers() const {
-  return st->checkersBB;
-}
-
-inline Bitboard Position::blockers_for_king(Color c) const {
-  return st->blockersForKing[c];
-}
-
-inline Bitboard Position::check_squares(PieceType pt) const {
-  return st->checkSquares[pt];
-}
-
-inline bool Position::is_discovery_check_on_king(Color c, Move m) const {
-  return st->blockersForKing[c] & from_sq(m);
 }
 
 inline Key Position::key() const {

@@ -232,7 +232,7 @@ void MainThread::search() {
   {
       rootMoves.emplace_back(MOVE_NONE);
       sync_cout << "info depth 0 score "
-                << UCI::value(rootPos.checkers() ? -VALUE_MATE : VALUE_DRAW)
+                << UCI::value(false /* TODO */ ? -VALUE_MATE : VALUE_DRAW)
                 << sync_endl;
   }
   else
@@ -634,7 +634,6 @@ namespace {
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
-    ss->inCheck = pos.checkers();
     priorCapture = pos.captured_piece();
     Color us = pos.side_to_move();
     moveCount = captureCount = quietCount = ss->moveCount = 0;
@@ -1113,7 +1112,7 @@ moves_loop: // When in check, search starts from here
 
       // Check extension (~2 Elo)
       else if (
-               (pos.is_discovery_check_on_king(~us, move) || pos.see_ge(move)))
+               (pos.see_ge(move)))
           extension = 1;
 
       // Last captures extension
@@ -1422,7 +1421,6 @@ moves_loop: // When in check, search starts from here
     Thread* thisThread = pos.this_thread();
     (ss+1)->ply = ss->ply + 1;
     bestMove = MOVE_NONE;
-    ss->inCheck = pos.checkers();
     moveCount = 0;
 
     // Check for an immediate draw or maximum ply reached

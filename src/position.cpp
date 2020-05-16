@@ -71,9 +71,6 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
      << std::setfill('0') << std::setw(16) << pos.key()
      << std::setfill(' ') << std::dec << "\nCheckers: ";
 
-  for (Bitboard b = pos.checkers(); b; )
-      os << UCI::square(pop_lsb(&b)) << " ";
-
   if (    int(Tablebases::MaxCardinality) >= popcount(pos.pieces())
      )
   {
@@ -444,8 +441,7 @@ bool Position::legal(Move m) const {
 
   // A non-king move is legal if and only if it is not pinned or it
   // is moving along the ray towards or away from the king.
-  return   !(blockers_for_king(us) & from)
-        ||  aligned(from, to, square<KING>(us));
+  return   aligned(from, to, square<KING>(us));
 }
 
 
@@ -491,27 +487,6 @@ bool Position::pseudo_legal(const Move m) const {
   }
   else if (!(attacks_from(type_of(pc), from) & to))
       return false;
-
-  // Evasions generator already takes care to avoid some kind of illegal moves
-  // and legal() relies on this. We therefore have to take care that the same
-  // kind of moves are filtered out here.
-  if (checkers())
-  {
-      if (type_of(pc) != KING)
-      {
-          // Double check? In this case a king move is required
-          if (more_than_one(checkers()))
-              return false;
-
-          // Our move must be a blocking evasion or a capture of the checking piece
-          if (!((between_bb(lsb(checkers()), square<KING>(us)) | checkers()) & to))
-              return false;
-      }
-      // In case of king moves under check we have to remove king so as to catch
-      // invalid moves like b1a1 when opposite queen is on c1.
-      else if (attackers_to(to, pieces() ^ from) & pieces(~us))
-          return false;
-  }
 
   return true;
 }
@@ -688,7 +663,6 @@ void Position::undo_move(Move m) {
 
 void Position::do_null_move(StateInfo& newSt) {
 
-  assert(!checkers());
   assert(&newSt != st);
 
   std::memcpy(&newSt, st, sizeof(StateInfo));
@@ -717,8 +691,6 @@ void Position::do_null_move(StateInfo& newSt) {
 }
 
 void Position::undo_null_move() {
-
-  assert(!checkers());
 
   st = st->previous;
   sideToMove = ~sideToMove;
@@ -852,7 +824,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
 bool Position::is_draw(int ply) const {
 
-  if (st->rule50 > 99 && (!checkers() || MoveList<LEGAL>(*this).size()))
+  if (st->rule50 > 99 && (MoveList<LEGAL>(*this).size()))
       return true;
 
   // Return a draw score if a position repeats once earlier but strictly
