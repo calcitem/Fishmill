@@ -1116,12 +1116,6 @@ moves_loop: // When in check, search starts from here
                (pos.is_discovery_check_on_king(~us, move) || pos.see_ge(move)))
           extension = 1;
 
-      // Passed pawn extension
-      else if (   move == ss->killers[0]
-               && pos.advanced_pawn_push(move)
-               && pos.pawn_passed(us, to_sq(move)))
-          extension = 1;
-
       // Last captures extension
       else if (   PieceValue[EG][pos.captured_piece()] > PawnValueEg
                && pos.non_pawn_material() <= 2 * RookValueMg)
@@ -1523,7 +1517,7 @@ moves_loop: // When in check, search starts from here
       // Futility pruning
       if (   !ss->inCheck
           &&  futilityBase > -VALUE_KNOWN_WIN
-          && !pos.advanced_pawn_push(move))
+         )
       {
           assert(type_of(move) != ENPASSANT); // Due to !pos.advanced_pawn_push
 

@@ -556,10 +556,6 @@ ScaleFactor Endgame<KRPPKRP>::operator()(const Position& pos) const {
   Square wpsq2 = pos.squares<PAWN>(strongSide)[1];
   Square bksq = pos.square<KING>(weakSide);
 
-  // Does the stronger side have a passed pawn?
-  if (pos.pawn_passed(strongSide, wpsq1) || pos.pawn_passed(strongSide, wpsq2))
-      return SCALE_FACTOR_NONE;
-
   Rank r = std::max(relative_rank(strongSide, wpsq1), relative_rank(strongSide, wpsq2));
 
   if (   distance<File>(bksq, wpsq1) <= 1
