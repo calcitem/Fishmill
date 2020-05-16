@@ -78,7 +78,7 @@ public:
   Position& operator=(const Position&) = delete;
 
   // FEN string input/output
-  Position& set(const std::string& fenStr, bool isChess960, StateInfo* si, Thread* th);
+  Position& set(const std::string& fenStr, StateInfo* si, Thread* th);
   Position& set(const std::string& code, Color c, StateInfo* si);
   const std::string fen() const;
 
@@ -142,7 +142,6 @@ public:
   // Other properties of the position
   Color side_to_move() const;
   int game_ply() const;
-  bool is_chess960() const;
   Thread* this_thread() const;
   bool is_draw(int ply) const;
   bool has_game_cycle(int ply) const;
@@ -178,7 +177,6 @@ private:
   Score psq;
   Thread* thisThread;
   StateInfo* st;
-  bool chess960;
 };
 
 namespace PSQT {
@@ -336,10 +334,6 @@ inline bool Position::opposite_bishops() const {
   return   count<BISHOP>(WHITE) == 1
         && count<BISHOP>(BLACK) == 1
         && opposite_colors(square<BISHOP>(WHITE), square<BISHOP>(BLACK));
-}
-
-inline bool Position::is_chess960() const {
-  return chess960;
 }
 
 inline bool Position::capture(Move m) const {
