@@ -43,7 +43,6 @@ struct StateInfo {
   Value  nonPawnMaterial[COLOR_NB];
   int    rule50;
   int    pliesFromNull;
-  Square epSquare;
 
   // Not copied when making a move (will be recomputed anyhow)
   Key        key;
@@ -89,7 +88,6 @@ public:
   Bitboard pieces(Color c, PieceType pt) const;
   Bitboard pieces(Color c, PieceType pt1, PieceType pt2) const;
   Piece piece_on(Square s) const;
-  Square ep_square() const;
   bool empty(Square s) const;
   template<PieceType Pt> int count(Color c) const;
   template<PieceType Pt> int count() const;
@@ -218,10 +216,6 @@ template<PieceType Pt> inline Square Position::square(Color c) const {
   return squares<Pt>(c)[0];
 }
 
-inline Square Position::ep_square() const {
-  return st->epSquare;
-}
-
 inline bool Position::is_on_semiopen_file(Color c, Square s) const {
   return !(pieces(c, PAWN) & file_bb(s));
 }
@@ -261,7 +255,7 @@ inline int Position::rule50_count() const {
 inline bool Position::capture(Move m) const {
   assert(is_ok(m));
   // Castling is encoded as "king captures rook"
-  return (!empty(to_sq(m)) && true || type_of(m) == ENPASSANT);
+  return (!empty(to_sq(m)));
 }
 
 inline Piece Position::captured_piece() const {

@@ -89,7 +89,7 @@ ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
 
   moveList = generate<NON_EVASIONS>(pos, moveList);
   while (cur != moveList)
-      if (   (from_sq(*cur) == ksq || type_of(*cur) == ENPASSANT)
+      if (   (from_sq(*cur) == ksq)
           && !pos.legal(*cur))
           *cur = (--moveList)->move;
       else

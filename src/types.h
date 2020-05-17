@@ -124,7 +124,6 @@ enum Move : int {
 
 enum MoveType {
   NORMAL,
-  ENPASSANT = 2 << 14
 };
 
 enum Color {

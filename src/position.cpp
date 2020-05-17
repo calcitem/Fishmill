@@ -40,7 +40,6 @@ using std::string;
 namespace Zobrist {
 
   Key psq[PIECE_NB][SQUARE_NB];
-  Key enpassant[FILE_NB];
   Key side, noPawns;
 }
 
@@ -111,9 +110,6 @@ void Position::init() {
   for (Piece pc : Pieces)
       for (Square s = SQ_A1; s <= SQ_H8; ++s)
           Zobrist::psq[pc][s] = rng.rand<Key>();
-
-  for (File f = FILE_A; f <= FILE_H; ++f)
-      Zobrist::enpassant[f] = rng.rand<Key>();
 
   Zobrist::side = rng.rand<Key>();
   Zobrist::noPawns = rng.rand<Key>();
@@ -233,9 +229,6 @@ void Position::set_state(StateInfo* si) const {
           si->nonPawnMaterial[color_of(pc)] += PieceValue[MG][pc];
   }
 
-  if (si->epSquare != SQ_NONE)
-      si->key ^= Zobrist::enpassant[file_of(si->epSquare)];
-
   if (sideToMove == BLACK)
       si->key ^= Zobrist::side;
 
@@ -296,7 +289,7 @@ const string Position::fen() const {
 
   ss << (sideToMove == WHITE ? " w " : " b ");
 
-  ss << (ep_square() == SQ_NONE ? " - " : " " + UCI::square(ep_square()) + " ")
+  ss << (" - ")
      << st->rule50 << " " << 1 + (gamePly - (sideToMove == BLACK)) / 2;
 
   return ss.str();
@@ -380,7 +373,7 @@ void Position::do_move(Move m, StateInfo& newSt) {
   Square from = from_sq(m);
   Square to = to_sq(m);
   Piece pc = piece_on(from);
-  Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to);
+  Piece captured = piece_on(to);
 
   assert(color_of(pc) == us);
   assert(captured == NO_PIECE || color_of(captured) == them);
@@ -390,31 +383,8 @@ void Position::do_move(Move m, StateInfo& newSt) {
   {
       Square capsq = to;
 
-      // If the captured piece is a pawn, update pawn hash key, otherwise
-      // update non-pawn material.
-      if (type_of(captured) == PAWN)
-      {
-          if (type_of(m) == ENPASSANT)
-          {
-              capsq -= pawn_push(us);
-
-              assert(pc == make_piece(us, PAWN));
-              assert(to == st->epSquare);
-              assert(relative_rank(us, to) == RANK_6);
-              assert(piece_on(to) == NO_PIECE);
-              assert(piece_on(capsq) == make_piece(them, PAWN));
-          }
-
-          st->pawnKey ^= Zobrist::psq[captured][capsq];
-      }
-      else
-          st->nonPawnMaterial[them] -= PieceValue[MG][captured];
-
       // Update board and piece lists
       remove_piece(capsq);
-
-      if (type_of(m) == ENPASSANT)
-          board[capsq] = NO_PIECE;
 
       // Update material hash key and prefetch access to materialTable
       k ^= Zobrist::psq[captured][capsq];
@@ -427,13 +397,6 @@ void Position::do_move(Move m, StateInfo& newSt) {
 
   // Update hash key
   k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
-
-  // Reset en passant square
-  if (st->epSquare != SQ_NONE)
-  {
-      k ^= Zobrist::enpassant[file_of(st->epSquare)];
-      st->epSquare = SQ_NONE;
-  }
 
   // Set capture piece
   st->capturedPiece = captured;
@@ -481,7 +444,6 @@ void Position::undo_move(Move m) {
   Piece pc = piece_on(to);
 
   assert(empty(from));
-  assert(type_of(st->capturedPiece) != KING);
 
   {
       move_piece(to, from); // Put the piece back at the source square
@@ -489,17 +451,6 @@ void Position::undo_move(Move m) {
       if (st->capturedPiece)
       {
           Square capsq = to;
-
-          if (type_of(m) == ENPASSANT)
-          {
-              capsq -= pawn_push(us);
-
-              assert(type_of(pc) == PAWN);
-              assert(to == st->previous->epSquare);
-              assert(relative_rank(us, to) == RANK_6);
-              assert(piece_on(capsq) == NO_PIECE);
-              assert(st->capturedPiece == make_piece(~us, PAWN));
-          }
 
           put_piece(st->capturedPiece, capsq); // Restore the captured piece
       }
@@ -523,12 +474,6 @@ void Position::do_null_move(StateInfo& newSt) {
   std::memcpy(&newSt, st, sizeof(StateInfo));
   newSt.previous = st;
   st = &newSt;
-
-  if (st->epSquare != SQ_NONE)
-  {
-      st->key ^= Zobrist::enpassant[file_of(st->epSquare)];
-      st->epSquare = SQ_NONE;
-  }
 
   st->key ^= Zobrist::side;
   prefetch(TT.first_entry(st->key));
