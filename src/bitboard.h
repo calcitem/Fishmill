@@ -61,17 +61,6 @@ constexpr Bitboard Rank6BB = Rank1BB << (8 * 5);
 constexpr Bitboard Rank7BB = Rank1BB << (8 * 6);
 constexpr Bitboard Rank8BB = Rank1BB << (8 * 7);
 
-constexpr Bitboard QueenSide   = FileABB | FileBBB | FileCBB | FileDBB;
-constexpr Bitboard CenterFiles = FileCBB | FileDBB | FileEBB | FileFBB;
-constexpr Bitboard KingSide    = FileEBB | FileFBB | FileGBB | FileHBB;
-constexpr Bitboard Center      = (FileDBB | FileEBB) & (Rank4BB | Rank5BB);
-
-constexpr Bitboard KingFlank[FILE_NB] = {
-  QueenSide ^ FileDBB, QueenSide, QueenSide,
-  CenterFiles, CenterFiles,
-  KingSide, KingSide, KingSide ^ FileEBB
-};
-
 extern uint8_t PopCnt16[1 << 16];
 extern uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
 
@@ -194,7 +183,7 @@ template<> inline int distance<File>(Square x, Square y) { return std::abs(file_
 template<> inline int distance<Rank>(Square x, Square y) { return std::abs(rank_of(x) - rank_of(y)); }
 template<> inline int distance<Square>(Square x, Square y) { return SquareDistance[x][y]; }
 
-inline int edge_distance(File f) { return std::min(f, File(FILE_H - f)); }
+inline int edge_distance(File f) { return std::min(f, File(FILE_C - f)); }
 inline int edge_distance(Rank r) { return std::min(r, Rank(RANK_8 - r)); }
 
 /// Return the target square bitboard if we do not step off the board, empty otherwise

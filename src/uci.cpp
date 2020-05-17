@@ -293,8 +293,6 @@ string UCI::move(Move m) {
   if (m == MOVE_NULL)
       return "0000";
 
-  to = make_square(to > from ? FILE_G : FILE_C, rank_of(from));
-
   string move = UCI::square(from) + UCI::square(to);
 
   return move;

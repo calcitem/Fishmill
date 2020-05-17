@@ -741,7 +741,7 @@ Ret do_probe_table(const Position& pos, T* entry, WDLScore wdl, ProbeState* resu
 
     // Now we map again the squares so that the square of the lead piece is in
     // the triangle A1-D1-D4.
-    if (file_of(squares[0]) > FILE_D)
+    if (file_of(squares[0]) > FILE_B)
         for (int i = 0; i < size; ++i)
             squares[i] = flip_file(squares[i]);
 
@@ -1066,7 +1066,7 @@ void set(T& e, uint8_t* data) {
     data++; // First byte stores flags
 
     const int sides = T::Sides == 2 && (e.key != e.key2) ? 2 : 1;
-    const File maxFile = e.hasPawns ? FILE_D : FILE_A;
+    const File maxFile = e.hasPawns ? FILE_B : FILE_A;
 
     bool pp = e.hasPawns && e.pawnCount[1]; // Pawns on both sides
 
@@ -1269,10 +1269,10 @@ void Tablebases::init(const std::string& paths) {
     std::vector<Square> diagonal;
     code = 0;
     for (Square s = SQ_A1; s <= SQ_D4; ++s)
-        if (off_A1H8(s) < 0 && file_of(s) <= FILE_D)
+        if (off_A1H8(s) < 0 && file_of(s) <= FILE_C)
             MapA1D1D4[s] = code++;
 
-        else if (!off_A1H8(s) && file_of(s) <= FILE_D)
+        else if (!off_A1H8(s) && file_of(s) <= FILE_C)
             diagonal.push_back(s);
 
     // Diagonal squares are encoded as last ones
@@ -1322,7 +1322,7 @@ void Tablebases::init(const std::string& paths) {
     // Init the tables for the encoding of leading pawns group: with 7-men TB we
     // can have up to 5 leading pawns (KPPPPPK).
     for (int leadPawnsCnt = 1; leadPawnsCnt <= 5; ++leadPawnsCnt)
-        for (File f = FILE_A; f <= FILE_D; ++f)
+        for (File f = FILE_A; f <= FILE_C; ++f)
         {
             // Restart the index at every file because TB table is splitted
             // by file, so we can reuse the same index for different files.

@@ -60,7 +60,7 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
 
   for (Rank r = RANK_8; r >= RANK_1; --r)
   {
-      for (File f = FILE_A; f <= FILE_H; ++f)
+      for (File f = FILE_A; f <= FILE_C; ++f)
           os << " | " << PieceToChar[pos.piece_on(make_square(f, r))];
 
       os << " |\n +---+---+---+---+---+---+---+---+\n";
@@ -271,15 +271,15 @@ const string Position::fen() const {
 
   for (Rank r = RANK_8; r >= RANK_1; --r)
   {
-      for (File f = FILE_A; f <= FILE_H; ++f)
+      for (File f = FILE_A; f <= FILE_C; ++f)
       {
-          for (emptyCnt = 0; f <= FILE_H && empty(make_square(f, r)); ++f)
+          for (emptyCnt = 0; f <= FILE_C && empty(make_square(f, r)); ++f)
               ++emptyCnt;
 
           if (emptyCnt)
               ss << emptyCnt;
 
-          if (f <= FILE_H)
+          if (f <= FILE_C)
               ss << PieceToChar[piece_on(make_square(f, r))];
       }
 

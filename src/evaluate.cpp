@@ -229,10 +229,6 @@ namespace {
     // Squares occupied by those pawns, by our king or queen, by blockers to attacks on our king
     // or controlled by enemy pawns are excluded from the mobility area.
     mobilityArea[Us] = ~(b | pos.pieces(Us, KING, QUEEN));
-
-    // Init our king safety tables
-    Square s = make_square(Utility::clamp(file_of(ksq), FILE_B, FILE_G),
-                           Utility::clamp(rank_of(ksq), RANK_2, RANK_7));
   }
 
 
