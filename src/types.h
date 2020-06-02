@@ -174,7 +174,7 @@ enum Value : int {
 };
 
 enum PieceType {
-  NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
+  NO_PIECE_TYPE, STONE, BAN,
   ALL_PIECES = 0,
   PIECE_TYPE_NB = 8
 };
@@ -427,11 +427,6 @@ constexpr Move make_move(Square from, Square to) {
 
 constexpr Move reverse_move(Move m) {
   return make_move(to_sq(m), from_sq(m));
-}
-
-template<MoveType T>
-constexpr Move make(Square from, Square to, PieceType pt = KNIGHT) {
-  return Move(T + ((pt - KNIGHT) << 12) + (from << 6) + to);
 }
 
 constexpr bool is_ok(Move m) {

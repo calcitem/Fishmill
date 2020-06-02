@@ -26,7 +26,7 @@
 
 namespace {
 
-  template<PieceType Pt, bool Checks>
+  template<PieceType Pt>
   ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Color us,
                           Bitboard target) {
 
@@ -38,12 +38,9 @@ namespace {
 
   template<Color Us, GenType Type>
   ExtMove* generate_all(const Position& pos, ExtMove* moveList, Bitboard target) {
-    constexpr bool Checks = false; // TODO; // Reduce template instantations
 
-    moveList = generate_moves<KNIGHT, Checks>(pos, moveList, Us, target);
-    moveList = generate_moves<BISHOP, Checks>(pos, moveList, Us, target);
-    moveList = generate_moves<  ROOK, Checks>(pos, moveList, Us, target);
-    moveList = generate_moves< QUEEN, Checks>(pos, moveList, Us, target);
+    moveList = generate_moves<STONE>(pos, moveList, Us, target);
+    moveList = generate_moves<BAN>(pos, moveList, Us, target);
 
     return moveList;
   }
@@ -84,15 +81,10 @@ template<>
 ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
 
   Color us = pos.side_to_move();
-  Square ksq = pos.square<KING>(us);
   ExtMove* cur = moveList;
 
   moveList = generate<NON_EVASIONS>(pos, moveList);
   while (cur != moveList)
-      if (   (from_sq(*cur) == ksq)
-          && !pos.legal(*cur))
-          *cur = (--moveList)->move;
-      else
           ++cur;
 
   return moveList;
