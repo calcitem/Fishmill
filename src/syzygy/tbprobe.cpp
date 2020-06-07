@@ -18,6 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef TBPROBE
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
@@ -1598,3 +1599,4 @@ bool Tablebases::root_probe_wdl(Position& pos, Search::RootMoves& rootMoves) {
 
     return true;
 }
+#endif

@@ -38,20 +38,14 @@
 struct StateInfo {
 
   // Copied when making a move
-  Key    pawnKey;
-  Key    materialKey;
-  Value  nonPawnMaterial[COLOR_NB];
   int    rule50;
   int    pliesFromNull;
 
   // Not copied when making a move (will be recomputed anyhow)
   Key        key;
-  Bitboard   checkersBB;
   Piece      capturedPiece;
   StateInfo* previous;
-  Bitboard   blockersForKing[COLOR_NB];
   Bitboard   pinners[COLOR_NB];
-  Bitboard   checkSquares[PIECE_TYPE_NB];
   int        repetition;
 };
 
@@ -114,8 +108,6 @@ public:
   // Accessing hash keys
   Key key() const;
   Key key_after(Move m) const;
-  Key material_key() const;
-  Key pawn_key() const;
 
   // Other properties of the position
   Color side_to_move() const;
@@ -125,9 +117,6 @@ public:
   bool has_game_cycle(int ply) const;
   bool has_repeated() const;
   int rule50_count() const;
-  Score psq_score() const;
-  Value non_pawn_material(Color c) const;
-  Value non_pawn_material() const;
 
   // Position consistency check, for debugging
   bool pos_is_ok() const;
@@ -217,31 +206,11 @@ template<PieceType Pt> inline Square Position::square(Color c) const {
 }
 
 inline bool Position::is_on_semiopen_file(Color c, Square s) const {
-  return !(pieces(c, PAWN) & file_bb(s));
+  return !(pieces(c, STONE) & file_bb(s));
 }
 
 inline Key Position::key() const {
   return st->key;
-}
-
-inline Key Position::pawn_key() const {
-  return st->pawnKey;
-}
-
-inline Key Position::material_key() const {
-  return st->materialKey;
-}
-
-inline Score Position::psq_score() const {
-  return psq;
-}
-
-inline Value Position::non_pawn_material(Color c) const {
-  return st->nonPawnMaterial[c];
-}
-
-inline Value Position::non_pawn_material() const {
-  return non_pawn_material(WHITE) + non_pawn_material(BLACK);
 }
 
 inline int Position::game_ply() const {

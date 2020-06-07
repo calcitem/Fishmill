@@ -21,6 +21,8 @@
 #ifndef TBPROBE_H
 #define TBPROBE_H
 
+#ifdef TBPROBE
+
 #include <ostream>
 
 #include "../search.h"
@@ -76,5 +78,7 @@ inline std::ostream& operator<<(std::ostream& os, const ProbeState v) {
 }
 
 }
+
+#endif
 
 #endif

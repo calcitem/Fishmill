@@ -53,24 +53,6 @@ namespace {
     {  97,  100, -42,   137,  268,    0 }  // Queen
   };
 
-  // Helper used to detect a given material distribution
-  bool is_KXK(const Position& pos, Color us) {
-    return  !more_than_one(pos.pieces(~us))
-          && pos.non_pawn_material(us) >= RookValueMg;
-  }
-
-  bool is_KBPsK(const Position& pos, Color us) {
-    return   pos.non_pawn_material(us) == BishopValueMg
-          && pos.count<PAWN  >(us) >= 1;
-  }
-
-  bool is_KQKRPs(const Position& pos, Color us) {
-    return  !pos.count<PAWN>(us)
-          && pos.non_pawn_material(us) == QueenValueMg
-          && pos.count<ROOK>(~us) == 1
-          && pos.count<PAWN>(~us) >= 1;
-  }
-
   /// imbalance() calculates the imbalance by comparing the piece count of each
   /// piece type for both colors.
   template<Color Us>
@@ -101,69 +83,5 @@ namespace {
 } // namespace
 
 namespace Material {
-
-/// Material::probe() looks up the current position's material configuration in
-/// the material hash table. It returns a pointer to the Entry if the position
-/// is found. Otherwise a new Entry is computed and stored there, so we don't
-/// have to recompute all when the same material configuration occurs again.
-
-Entry* probe(const Position& pos) {
-
-  Key key = pos.material_key();
-  Entry* e = pos.this_thread()->materialTable[key];
-
-  if (e->key == key)
-      return e;
-
-  std::memset(e, 0, sizeof(Entry));
-  e->key = key;
-  e->factor[WHITE] = e->factor[BLACK] = (uint8_t)SCALE_FACTOR_NORMAL;
-
-  Value npm_w = pos.non_pawn_material(WHITE);
-  Value npm_b = pos.non_pawn_material(BLACK);
-  Value npm   = Utility::clamp(npm_w + npm_b, EndgameLimit, MidgameLimit);
-
-  // Map total non-pawn material into [PHASE_ENDGAME, PHASE_MIDGAME]
-  e->gamePhase = Phase(((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit));
-
-  // Let's look if we have a specialized evaluation function for this particular
-  // material configuration. Firstly we look for a fixed configuration one, then
-  // for a generic one if the previous search failed.
-  if ((e->evaluationFunction = Endgames::probe<Value>(key)) != nullptr)
-      return e;
-
-  // OK, we didn't find any special evaluation function for the current material
-  // configuration. Is there a suitable specialized scaling function?
-  const auto* sf = Endgames::probe<ScaleFactor>(key);
-
-  if (sf)
-  {
-      e->scalingFunction[sf->strongSide] = sf; // Only strong color assigned
-      return e;
-  }
-
-  // Zero or just one pawn makes it difficult to win, even with a small material
-  // advantage. This catches some trivial draws like KK, KBK and KNK and gives a
-  // drawish scale factor for cases such as KRKBP and KmmKm (except for KBBKN).
-  if (!pos.count<PAWN>(WHITE) && npm_w - npm_b <= BishopValueMg)
-      e->factor[WHITE] = uint8_t(npm_w <  RookValueMg   ? SCALE_FACTOR_DRAW :
-                                 npm_b <= BishopValueMg ? 4 : 14);
-
-  if (!pos.count<PAWN>(BLACK) && npm_b - npm_w <= BishopValueMg)
-      e->factor[BLACK] = uint8_t(npm_b <  RookValueMg   ? SCALE_FACTOR_DRAW :
-                                 npm_w <= BishopValueMg ? 4 : 14);
-
-  // Evaluate the material imbalance. We use PIECE_TYPE_NONE as a place holder
-  // for the bishop pair "extended piece", which allows us to be more flexible
-  // in defining bishop pair bonuses.
-  const int pieceCount[COLOR_NB][PIECE_TYPE_NB] = {
-  { pos.count<BISHOP>(WHITE) > 1, pos.count<PAWN>(WHITE), pos.count<KNIGHT>(WHITE),
-    pos.count<BISHOP>(WHITE)    , pos.count<ROOK>(WHITE), pos.count<QUEEN >(WHITE) },
-  { pos.count<BISHOP>(BLACK) > 1, pos.count<PAWN>(BLACK), pos.count<KNIGHT>(BLACK),
-    pos.count<BISHOP>(BLACK)    , pos.count<ROOK>(BLACK), pos.count<QUEEN >(BLACK) } };
-
-  e->value = int16_t((imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16);
-  return e;
-}
 
 } // namespace Material

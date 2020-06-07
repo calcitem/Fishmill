@@ -42,7 +42,9 @@ void on_clear_hash(const Option&) { Search::clear(); }
 void on_hash_size(const Option& o) { TT.resize((size_t)o); }
 void on_logger(const Option& o) { start_logger(o); }
 void on_threads(const Option& o) { Threads.set((size_t)o); }
+#ifdef TBPROBE
 void on_tb_path(const Option& o) { Tablebases::init(o); }
+#endif
 
 
 /// Our case insensitive less() function as required by UCI protocol
@@ -76,10 +78,12 @@ void init(OptionsMap& o) {
   o["UCI_AnalyseMode"]       << Option(false);
   o["UCI_LimitStrength"]     << Option(false);
   o["UCI_Elo"]               << Option(1350, 1350, 2850);
+#ifdef TBPROBE
   o["SyzygyPath"]            << Option("<empty>", on_tb_path);
   o["SyzygyProbeDepth"]      << Option(1, 1, 100);
   o["Syzygy50MoveRule"]      << Option(true);
   o["SyzygyProbeLimit"]      << Option(7, 0, 7);
+#endif
 }
 
 

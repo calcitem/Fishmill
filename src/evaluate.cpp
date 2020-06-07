@@ -169,11 +169,9 @@ namespace {
     template<Color Us, PieceType Pt> Score pieces();
     template<Color Us> Score threats() const;
     template<Color Us> Score space() const;
-    ScaleFactor scale_factor(Value eg) const;
     Score initiative(Score score) const;
 
     const Position& pos;
-    Material::Entry* me;
     Bitboard mobilityArea[COLOR_NB];
     Score mobility[COLOR_NB] = { SCORE_ZERO, SCORE_ZERO };
 
@@ -294,24 +292,6 @@ namespace {
   }
 
 
-  // Evaluation::scale_factor() computes the scale factor for the winning side
-
-  template<Tracing T>
-  ScaleFactor Evaluation<T>::scale_factor(Value eg) const {
-
-    Color strongSide = eg > VALUE_DRAW ? WHITE : BLACK;
-    int sf = me->scale_factor(pos, strongSide);
-
-    // If scale is not already specific, scale down the endgame via general heuristics
-    if (sf == SCALE_FACTOR_NORMAL)
-    {
-        sf = std::max(0, sf - (pos.rule50_count() - 12) / 4);
-    }
-
-    return ScaleFactor(sf);
-  }
-
-
   // Evaluation::value() is the main function of the class. It computes the various
   // parts of the evaluation and returns the value of the position from the point
   // of view of the side to move.
@@ -319,22 +299,14 @@ namespace {
   template<Tracing T>
   Value Evaluation<T>::value() {
 
-    // Probe the material hash table
-    me = Material::probe(pos);
-
-    // If we have a specialized evaluation function for the current material
-    // configuration, call it and return.
-    if (me->specialized_eval_exists())
-        return me->evaluate(pos);
-
     // Initialize score by reading the incrementally updated scores included in
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance() + pos.this_thread()->contempt;
+    Score score = pos.this_thread()->contempt;
 
     // Early exit if score is high
     Value v = (mg_value(score) + eg_value(score)) / 2;
-    if (abs(v) > LazyThreshold + pos.non_pawn_material() / 64)
+    if (abs(v) > LazyThreshold)
        return pos.side_to_move() == WHITE ? v : -v;
 
     // Main evaluation begins here
@@ -344,8 +316,6 @@ namespace {
 
     // Pieces evaluated first (also populates attackedBy, attackedBy2).
     // Note that the order of evaluation of the terms is left unspecified
-    score +=  pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>();    // TODO
-
     score += mobility[WHITE] - mobility[BLACK];
 
     // More complex interactions that require fully populated attack bitboards
@@ -355,17 +325,14 @@ namespace {
     score += initiative(score);
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
-    ScaleFactor sf = scale_factor(eg_value(score));
-    v =  mg_value(score) * int(me->game_phase())
-       + eg_value(score) * int(PHASE_MIDGAME - me->game_phase()) * sf / SCALE_FACTOR_NORMAL;
+    v =  mg_value(score)
+       + eg_value(score);
 
     v /= PHASE_MIDGAME;
 
     // In case of tracing add all remaining individual evaluation terms
     if (T)
     {
-        Trace::add(MATERIAL, pos.psq_score());
-        Trace::add(IMBALANCE, me->imbalance());
         Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
         Trace::add(TOTAL, score);
     }

@@ -208,7 +208,9 @@ void Search::clear() {
   Time.availableNodes = 0;
   TT.clear();
   Threads.clear();
+#ifdef TBPROBE
   Tablebases::init(Options["SyzygyPath"]); // Free mapped files
+#endif
 }
 
 
@@ -739,6 +741,7 @@ namespace {
     }
 
     // Step 5. Tablebases probe
+#ifdef TBPROBE
     if (!rootNode && TB::Cardinality)
     {
         int piecesCount = pos.count<ALL_PIECES>();
@@ -788,6 +791,7 @@ namespace {
             }
         }
     }
+#endif
 
     CapturePieceToHistory& captureHistory = thisThread->captureHistory;
 
@@ -851,7 +855,6 @@ namespace {
         &&  eval >= ss->staticEval
         &&  ss->staticEval >= beta - 32 * depth - 30 * improving + 120 * ttPv + 292
         && !excludedMove
-        &&  pos.non_pawn_material(us)
         && (ss->ply >= thisThread->nmpMinPly || us != thisThread->nmpColor))
     {
         assert(eval - beta >= 0);
@@ -1008,7 +1011,6 @@ moves_loop: // When in check, search starts from here
 
       // Step 13. Pruning at shallow depth (~200 Elo)
       if (  !rootNode
-          && pos.non_pawn_material(us)
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold
@@ -1114,17 +1116,6 @@ moves_loop: // When in check, search starts from here
       else if (
                (pos.see_ge(move)))
           extension = 1;
-
-      // Last captures extension
-      else if (   PieceValue[EG][pos.captured_piece()] > PawnValueEg
-               && pos.non_pawn_material() <= 2 * RookValueMg)
-          extension = 1;
-
-      // Late irreversible move extension
-      if (   move == ttMove
-          && pos.rule50_count() > 80
-          && (capture || type_of(movedPiece) == PAWN))
-          extension = 2;
 
       // Add extension to new depth
       newDepth += extension;
@@ -1724,7 +1715,7 @@ moves_loop: // When in check, search starts from here
     thisThread->mainHistory[us][from_to(move)] << bonus;
     update_continuation_histories(ss, pos.moved_piece(move), to_sq(move), bonus);
 
-    if (type_of(pos.moved_piece(move)) != PAWN)
+    if (type_of(pos.moved_piece(move)) != STONE)
         thisThread->mainHistory[us][from_to(reverse_move(move))] << -bonus;
 
     if (is_ok((ss-1)->currentMove))
@@ -1890,6 +1881,7 @@ bool RootMove::extract_ponder_from_tt(Position& pos) {
     return pv.size() > 1;
 }
 
+#ifdef TBPROBE
 void Tablebases::rank_root_moves(Position& pos, Search::RootMoves& rootMoves) {
 
     RootInTB = false;
@@ -1936,3 +1928,4 @@ void Tablebases::rank_root_moves(Position& pos, Search::RootMoves& rootMoves) {
             m.tbRank = 0;
     }
 }
+#endif

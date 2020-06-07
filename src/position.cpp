@@ -70,6 +70,7 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
      << std::setfill('0') << std::setw(16) << pos.key()
      << std::setfill(' ') << std::dec << "\nCheckers: ";
 
+#ifdef TBPROBE
   if (    int(Tablebases::MaxCardinality) >= popcount(pos.pieces())
      )
   {
@@ -78,10 +79,9 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
       p.set(pos.fen(), &st, pos.this_thread());
       Tablebases::ProbeState s1, s2;
       Tablebases::WDLScore wdl = Tablebases::probe_wdl(p, &s1);
-      int dtz = Tablebases::probe_dtz(p, &s2);
-      os << "\nTablebases WDL: " << std::setw(4) << wdl << " (" << s1 << ")"
-         << "\nTablebases DTZ: " << std::setw(4) << dtz << " (" << s2 << ")";
+      os << "\nTablebases WDL: " << std::setw(4) << wdl << " (" << s1 << ")";
   }
+#endif
 
   return os;
 }
@@ -212,29 +212,17 @@ Position& Position::set(const string& fenStr, StateInfo* si, Thread* th) {
 
 void Position::set_state(StateInfo* si) const {
 
-  si->key = si->materialKey = 0;
-  si->pawnKey = Zobrist::noPawns;
-  si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = VALUE_ZERO;
+  si->key = 0;
 
   for (Bitboard b = pieces(); b; )
   {
       Square s = pop_lsb(&b);
       Piece pc = piece_on(s);
       si->key ^= Zobrist::psq[pc][s];
-
-      if (type_of(pc) == PAWN)
-          si->pawnKey ^= Zobrist::psq[pc][s];
-
-      else if (type_of(pc) != KING)
-          si->nonPawnMaterial[color_of(pc)] += PieceValue[MG][pc];
   }
 
   if (sideToMove == BLACK)
       si->key ^= Zobrist::side;
-
-  for (Piece pc : Pieces)
-      for (int cnt = 0; cnt < pieceCount[pc]; ++cnt)
-          si->materialKey ^= Zobrist::psq[pc][cnt];
 }
 
 
@@ -307,11 +295,10 @@ bool Position::legal(Move m) const {
   Square to = to_sq(m);
 
   assert(color_of(moved_piece(m)) == us);
-  assert(piece_on(square<KING>(us)) == make_piece(us, KING));
 
   // A non-king move is legal if and only if it is not pinned or it
   // is moving along the ray towards or away from the king.
-  return   aligned(from, to, square<KING>(us));
+  return   aligned(from, to, square<STONE>(us));    // TODO
 }
 
 
@@ -377,7 +364,6 @@ void Position::do_move(Move m, StateInfo& newSt) {
 
   assert(color_of(pc) == us);
   assert(captured == NO_PIECE || color_of(captured) == them);
-  assert(type_of(captured) != KING);
 
   if (captured)
   {
@@ -388,8 +374,6 @@ void Position::do_move(Move m, StateInfo& newSt) {
 
       // Update material hash key and prefetch access to materialTable
       k ^= Zobrist::psq[captured][capsq];
-      st->materialKey ^= Zobrist::psq[captured][pieceCount[captured]];
-      prefetch(thisThread->materialTable[st->materialKey]);
 
       // Reset rule 50 counter
       st->rule50 = 0;
@@ -678,8 +662,8 @@ bool Position::pos_is_ok() const {
       || popcount(pieces(BLACK)) > 16)
       assert(0 && "pos_is_ok: Bitboards");
 
-  for (PieceType p1 = PAWN; p1 <= KING; ++p1)
-      for (PieceType p2 = PAWN; p2 <= KING; ++p2)
+  for (PieceType p1 = BAN; p1 <= STONE; ++p1)
+      for (PieceType p2 = BAN; p2 <= STONE; ++p2)
           if (p1 != p2 && (pieces(p1) & pieces(p2)))
               assert(0 && "pos_is_ok: Bitboards");
 

@@ -30,7 +30,7 @@
 #include "uci.h"
 #include "syzygy/tbprobe.h"
 
-#if 0
+#ifdef TBPROBE
 
 namespace PSQT {
   void init();

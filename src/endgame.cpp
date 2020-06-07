@@ -43,19 +43,13 @@ namespace {
   inline int push_close(Square s1, Square s2) { return 140 - 20 * distance(s1, s2); }
   inline int push_away(Square s1, Square s2) { return 120 - push_close(s1, s2); }
 
-#ifndef NDEBUG
-  bool verify_material(const Position& pos, Color c, Value npm, int pawnsCnt) {
-    return pos.non_pawn_material(c) == npm && pos.count<PAWN>(c) == pawnsCnt;
-  }
-#endif
-
   // Map the square as if strongSide is white and strongSide's only pawn
   // is on the left half of the board.
   Square normalize(const Position& pos, Color strongSide, Square sq) {
 
-    assert(pos.count<PAWN>(strongSide) == 1);
+    assert(pos.count<STONE>(strongSide) == 1);
 
-    if (file_of(pos.square<PAWN>(strongSide)) >= FILE_C)
+    if (file_of(pos.square<STONE>(strongSide)) >= FILE_C)
         sq = flip_file(sq);
 
     return strongSide == WHITE ? sq : flip_rank(sq);
