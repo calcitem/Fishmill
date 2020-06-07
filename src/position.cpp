@@ -47,8 +47,8 @@ namespace {
 
 const string PieceToChar(" PNBRQK  pnbrqk");
 
-constexpr Piece Pieces[] = { W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
-                             B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING };
+constexpr Piece Pieces[] = { W_STONE,
+                             B_STONE };
 } // namespace
 
 
@@ -511,11 +511,11 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   Square from = from_sq(m), to = to_sq(m);
 
-  int swap = PieceValue[MG][piece_on(to)] - threshold;
+  int swap = PieceValue - threshold;
   if (swap < 0)
       return false;
 
-  swap = PieceValue[MG][piece_on(from)] - swap;
+  swap = PieceValue - swap;
   if (swap <= 0)
       return true;
 

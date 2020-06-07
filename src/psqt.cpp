@@ -40,24 +40,11 @@ constexpr Score Bonus[][RANK_NB][int(FILE_NB) / 2] = {
 
 #undef S
 
-Score psq[PIECE_NB][SQUARE_NB];
-
 // init() initializes piece-square tables: the white halves of the tables are
 // copied from Bonus[] adding the piece value, then the black halves of the
 // tables are initialized by flipping and changing the sign of the white scores.
 void init() {
 
-  for (Piece pc = W_PAWN; pc <= W_KING; ++pc)
-  {
-      Score score = make_score(PieceValue[MG][pc], PieceValue[EG][pc]);
-
-      for (Square s = SQ_A1; s <= SQ_H8; ++s)
-      {
-          File f = File(edge_distance(file_of(s)));
-          psq[ pc][ s] = score + (Bonus[pc][rank_of(s)][f]);
-          psq[~pc][flip_rank(s)] = -psq[pc][s];
-      }
-  }
 }
 
 } // namespace PSQT

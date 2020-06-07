@@ -163,12 +163,8 @@ enum Value : int {
   VALUE_MATE_IN_MAX_PLY  =  VALUE_MATE - MAX_PLY,
   VALUE_MATED_IN_MAX_PLY = -VALUE_MATE_IN_MAX_PLY,
 
-  PawnValueMg   = 124,   PawnValueEg   = 206,
-  KnightValueMg = 781,   KnightValueEg = 854,
-  BishopValueMg = 825,   BishopValueEg = 915,
-  RookValueMg   = 1276,  RookValueEg   = 1380,
-  QueenValueMg  = 2538,  QueenValueEg  = 2682,
-  Tempo = 28,
+  StoneValue = 5,
+  Tempo = 0,
 
   MidgameLimit  = 15258, EndgameLimit  = 3915
 };
@@ -180,18 +176,41 @@ enum PieceType {
 };
 
 enum Piece {
-  NO_PIECE,
-  W_PAWN = 1, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
-  B_PAWN = 9, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
-  PIECE_NB = 16
+  NO_PIECE = 0x00,
+  BAN_STONE = 0x0F,
+
+  B_STONE = 0x10,
+  B_STONE_1 = 0x11,
+  B_STONE_2 = 0x12,
+  B_STONE_3 = 0x13,
+  B_STONE_4 = 0x14,
+  B_STONE_5 = 0x15,
+  B_STONE_6 = 0x16,
+  B_STONE_7 = 0x17,
+  B_STONE_8 = 0x18,
+  B_STONE_9 = 0x19,
+  B_STONE_10 = 0x1A,
+  B_STONE_11 = 0x1B,
+  B_STONE_12 = 0x1C,
+
+  W_STONE = 0x20,
+  W_STONE_1 = 0x21,
+  W_STONE_2 = 0x22,
+  W_STONE_3 = 0x23,
+  W_STONE_4 = 0x24,
+  W_STONE_5 = 0x25,
+  W_STONE_6 = 0x26,
+  W_STONE_7 = 0x27,
+  W_STONE_8 = 0x28,
+  W_STONE_9 = 0x29,
+  W_STONE_10 = 0x2A,
+  W_STONE_11 = 0x2B,
+  W_STONE_12 = 0x2C,
+
+  PIECE_NB = 24
 };
 
-constexpr Value PieceValue[PHASE_NB][PIECE_NB] = {
-  { VALUE_ZERO, PawnValueMg, KnightValueMg, BishopValueMg, RookValueMg, QueenValueMg, VALUE_ZERO, VALUE_ZERO,
-    VALUE_ZERO, PawnValueMg, KnightValueMg, BishopValueMg, RookValueMg, QueenValueMg, VALUE_ZERO, VALUE_ZERO },
-  { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg, VALUE_ZERO, VALUE_ZERO,
-    VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg, VALUE_ZERO, VALUE_ZERO }
-};
+constexpr Value PieceValue = StoneValue;
 
 typedef int Depth;
 
