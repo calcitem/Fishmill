@@ -258,6 +258,22 @@ enum Direction : int {
   NORTH_WEST = NORTH + WEST
 };
 
+enum MoveDirection : int {
+    MD_CLOCKWISE = 0,
+    MD_BEGIN = MD_CLOCKWISE,
+    MD_ANTICLOCKWISE = 1,
+    MD_INWARD = 2,
+    MD_OUTWARD = 3,
+    MD_NB = 4
+};
+
+enum LineDirection{
+    LD_HORIZONTAL = 0,
+    LD_VERTICAL = 1,
+    LD_SLASH = 2,
+    LD_NB = 3
+};
+
 enum File : int {
   FILE_A = 1, FILE_B, FILE_C, FILE_NB = 3
 };
