@@ -108,7 +108,7 @@ void Position::init() {
   PRNG rng(1070372);
 
   for (Piece pc : Pieces)
-      for (Square s = SQ_A1; s <= SQ_H8; ++s)
+      for (Square s = SQ_A1; s <= SQ_C8; ++s)
           Zobrist::psq[pc][s] = rng.rand<Key>();
 
   Zobrist::side = rng.rand<Key>();

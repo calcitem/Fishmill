@@ -59,11 +59,11 @@ void Bitboards::init() {
   for (unsigned i = 0; i < (1 << 16); ++i)
       PopCnt16[i] = (uint8_t)std::bitset<16>(i).count();
 
-  for (Square s = SQ_A1; s <= SQ_H8; ++s)
+  for (Square s = SQ_A1; s <= SQ_C8; ++s)
       SquareBB[s] = (1ULL << s);
 
-  for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
-      for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
+  for (Square s1 = SQ_A1; s1 <= SQ_C8; ++s1)
+      for (Square s2 = SQ_A1; s2 <= SQ_C8; ++s2)
           SquareDistance[s1][s2] = (uint8_t)std::max(distance<File>(s1, s2), distance<Rank>(s1, s2));
 }
 
