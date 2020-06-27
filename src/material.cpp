@@ -29,57 +29,6 @@ using namespace std;
 
 namespace {
 
-  // Polynomial material imbalance parameters
-
-  constexpr int QuadraticOurs[][PIECE_TYPE_NB] = {
-    //            OUR PIECES
-    // pair pawn knight bishop rook queen
-    {1438                               }, // Bishop pair
-    {  40,   38                         }, // Pawn
-    {  32,  255, -62                    }, // Knight      OUR PIECES
-    {   0,  104,   4,    0              }, // Bishop
-    { -26,   -2,  47,   105,  -208      }, // Rook
-    {-189,   24, 117,   133,  -134, -6  }  // Queen
-  };
-
-  constexpr int QuadraticTheirs[][PIECE_TYPE_NB] = {
-    //           THEIR PIECES
-    // pair pawn knight bishop rook queen
-    {   0                               }, // Bishop pair
-    {  36,    0                         }, // Pawn
-    {   9,   63,   0                    }, // Knight      OUR PIECES
-    {  59,   65,  42,     0             }, // Bishop
-    {  46,   39,  24,   -24,    0       }, // Rook
-    {  97,  100, -42,   137,  268,    0 }  // Queen
-  };
-
-  /// imbalance() calculates the imbalance by comparing the piece count of each
-  /// piece type for both colors.
-  template<Color Us>
-  int imbalance(const int pieceCount[][PIECE_TYPE_NB]) {
-
-    constexpr Color Them = ~Us;
-
-    int bonus = 0;
-
-    // Second-degree polynomial material imbalance, by Tord Romstad
-    for (int pt1 = NO_PIECE_TYPE; pt1 <= BAN; ++pt1)
-    {
-        if (!pieceCount[Us][pt1])
-            continue;
-
-        int v = 0;
-
-        for (int pt2 = NO_PIECE_TYPE; pt2 <= pt1; ++pt2)
-            v +=  QuadraticOurs[pt1][pt2] * pieceCount[Us][pt2]
-                + QuadraticTheirs[pt1][pt2] * pieceCount[Them][pt2];
-
-        bonus += pieceCount[Us][pt1] * v;
-    }
-
-    return bonus;
-  }
-
 } // namespace
 
 namespace Material {

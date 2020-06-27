@@ -40,8 +40,8 @@ extern vector<string> setup_bench(const Position&, istream&);
 
 namespace {
 
-  // FEN string of the initial position, normal chess
-  const char *StartFEN = ""; // TODO: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  // FEN string of the initial position, normal mill game
+  const char *StartFEN = "oooooooo/oooooooo/oooooooo b p 0 1"; // Chess: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 
   // position() is called when engine receives the "position" UCI command.
@@ -251,7 +251,7 @@ void UCI::loop(int argc, char* argv[]) {
 /// UCI::value() converts a Value to a string suitable for use with the UCI
 /// protocol specification:
 ///
-/// cp <x>    The score from the engine's point of view in centipawns.
+/// cp <x>    The score from the engine's point of view in stones.
 /// mate <y>  Mate in y moves, not plies. If the engine is getting mated
 ///           use negative values for y.
 
@@ -262,7 +262,7 @@ string UCI::value(Value v) {
   stringstream ss;
 
   if (abs(v) < VALUE_MATE_IN_MAX_PLY)
-      ss << "cp " << v * 100 / StoneValue;
+      ss << "cp " << v / StoneValue;
   else
       ss << "mate " << (v > 0 ? VALUE_MATE - v + 1 : -VALUE_MATE - v) / 2;
 
@@ -270,7 +270,7 @@ string UCI::value(Value v) {
 }
 
 
-/// UCI::square() converts a Square to a string in algebraic notation (g1, a7, etc.)
+/// UCI::square() converts a Square to a string in algebraic notation (c1, a7, etc.)
 
 std::string UCI::square(Square s) {
   return std::string{ char('a' + file_of(s)), char('1' + rank_of(s)) };

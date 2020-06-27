@@ -123,11 +123,14 @@ enum Move : int {
 };
 
 enum MoveType {
-  NORMAL,
+  MOVETYPE_PLACE,
+  MOVETYPE_MOVE,
+  MOVETYPE_REMOVE,
+  NORMAL,   // TODO
 };
 
 enum Color {
-  WHITE, BLACK, COLOR_NB = 2
+  NOCOLOR, BLACK, WHITE, COLOR_NB = 3
 };
 
 enum Phase {
@@ -170,9 +173,9 @@ enum Value : int {
 };
 
 enum PieceType {
-  NO_PIECE_TYPE, STONE, BAN,
+  NO_PIECE_TYPE, BLACK_STONE, WHITE_STONE, STONE, BAN,
   ALL_PIECES = 0,
-  PIECE_TYPE_NB = 8
+  PIECE_TYPE_NB = 4
 };
 
 enum Piece {
@@ -267,7 +270,7 @@ enum MoveDirection : int {
     MD_NB = 4
 };
 
-enum LineDirection{
+enum LineDirection : int {
     LD_HORIZONTAL = 0,
     LD_VERTICAL = 1,
     LD_SLASH = 2,
@@ -380,11 +383,11 @@ inline Score operator*(Score s, bool b) {
 }
 
 constexpr Color operator~(Color c) {
-  return Color(c ^ BLACK); // Toggle color
+  return Color(c ^ 3); // Toggle color
 }
 
 constexpr Square flip_rank(Square s) {
-  return Square(s ^ SQ_A8);
+  return Square(s ^ SQ_A8); // TODO
 }
 
 constexpr Square flip_file(Square s) {
@@ -392,7 +395,7 @@ constexpr Square flip_file(Square s) {
 }
 
 constexpr Piece operator~(Piece pc) {
-  return Piece(pc ^ 8); // Swap color of piece B_KNIGHT -> W_KNIGHT
+  return Piece(pc ^ 0x30); // Swap color of piece B_STONE -> W_STONE
 }
 
 constexpr Value mate_in(int ply) {
@@ -404,20 +407,36 @@ constexpr Value mated_in(int ply) {
 }
 
 constexpr Square make_square(File f, Rank r) {
-  return Square((r << 3) + f);
+  return Square(((r + 1) << 3) + f);
 }
 
 constexpr Piece make_piece(Color c, PieceType pt) {
-  return Piece((c << 3) + pt);
+  if (pt == BLACK_STONE || pt == WHITE_STONE) {
+      return Piece((c << 4));
+  }
+
+  if (pt == BAN) {
+      return BAN_STONE;
+  }
+
+  return NO_PIECE;
 }
 
 constexpr PieceType type_of(Piece pc) {
-  return PieceType(pc & 7);
+  if (pc & 0x30) {
+      return STONE;
+  }
+
+  if (pc == BAN_STONE) {
+      return BAN;
+  }
+
+  return NO_PIECE_TYPE;
 }
 
 inline Color color_of(Piece pc) {
   assert(pc != NO_PIECE);
-  return Color(pc >> 3);
+  return Color(pc >> 4);
 }
 
 constexpr bool is_ok(Square s) {
@@ -425,47 +444,52 @@ constexpr bool is_ok(Square s) {
 }
 
 constexpr File file_of(Square s) {
-  return File(s & 7);
+  return File((s >> 3) - 1);
 }
 
 constexpr Rank rank_of(Square s) {
-  return Rank(s >> 3);
+  return Rank(s & 7);
 }
 
 constexpr Square relative_square(Color c, Square s) {
-  return Square(s ^ (c * 56));
+  return Square(s ^ (c * 16));  // TODO
 }
 
 constexpr Rank relative_rank(Color c, Rank r) {
-  return Rank(r ^ (c * 7));
+  return Rank(r ^ (c * 7));  // TODO
 }
 
 constexpr Rank relative_rank(Color c, Square s) {
-  return relative_rank(c, rank_of(s));
-}
-
-constexpr Direction pawn_push(Color c) {
-  return c == WHITE ? NORTH : SOUTH;
+  return relative_rank(c, rank_of(s));  // TODO
 }
 
 constexpr Square from_sq(Move m) {
-  return Square((m >> 6) & 0x3F);
+  return Square(m >> 8);
 }
 
 constexpr Square to_sq(Move m) {
-  return Square(m & 0x3F);
+  if (m < 0)
+      m = (Move)-m;
+
+  return Square(m & 0x00FF);
 }
 
 constexpr int from_to(Move m) {
- return m & 0xFFF;
+ return m & 0xFFF;  // TODO
 }
 
 constexpr MoveType type_of(Move m) {
-  return MoveType(m & (3 << 14));
+  if (m < 0) {
+      return MOVETYPE_REMOVE;
+  } else if (m & 0x1f00) {
+      return MOVETYPE_MOVE;
+  }
+
+  return MOVETYPE_PLACE;  // m & 0x00ff
 }
 
 constexpr Move make_move(Square from, Square to) {
-  return Move((from << 6) + to);
+  return Move((from << 8) + to);
 }
 
 constexpr Move reverse_move(Move m) {
