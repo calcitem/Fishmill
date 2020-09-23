@@ -32,9 +32,9 @@
 
 const std::string engine_info(bool to_uci = false);
 const std::string compiler_info();
-void prefetch(void* addr);
-void start_logger(const std::string& fname);
-void* aligned_ttmem_alloc(size_t size, void*& mem);
+void prefetch(void *addr);
+void start_logger(const std::string &fname);
+void *aligned_ttmem_alloc(size_t size, void *&mem);
 
 void dbg_hit_on(bool b);
 void dbg_hit_on(bool c, bool b);
@@ -45,31 +45,41 @@ typedef std::chrono::milliseconds::rep TimePoint; // A value in milliseconds
 
 static_assert(sizeof(TimePoint) == sizeof(int64_t), "TimePoint should be 64 bits");
 
-inline TimePoint now() {
-  return std::chrono::duration_cast<std::chrono::milliseconds>
+inline TimePoint now()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>
         (std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 template<class Entry, int Size>
-struct HashTable {
-  Entry* operator[](Key key) { return &table[(uint32_t)key & (Size - 1)]; }
+struct HashTable
+{
+    Entry *operator[](Key key)
+    {
+        return &table[(uint32_t)key & (Size - 1)];
+    }
 
 private:
-  std::vector<Entry> table = std::vector<Entry>(Size); // Allocate on the heap
+    std::vector<Entry> table = std::vector<Entry>(Size); // Allocate on the heap
 };
 
 
-enum SyncCout { IO_LOCK, IO_UNLOCK };
-std::ostream& operator<<(std::ostream&, SyncCout);
+enum SyncCout
+{
+    IO_LOCK, IO_UNLOCK
+};
+std::ostream &operator<<(std::ostream &, SyncCout);
 
 #define sync_cout std::cout << IO_LOCK
 #define sync_endl std::endl << IO_UNLOCK
 
-namespace Utility {
+namespace Utility
+{
 
 /// Clamp a value between lo and hi. Available in c++17.
-template<class T> constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
-  return v < lo ? lo : v > hi ? hi : v;
+template<class T> constexpr const T &clamp(const T &v, const T &lo, const T &hi)
+{
+    return v < lo ? lo : v > hi ? hi : v;
 }
 
 }
@@ -89,25 +99,34 @@ template<class T> constexpr const T& clamp(const T& v, const T& lo, const T& hi)
 /// For further analysis see
 ///   <http://vigna.di.unimi.it/ftp/papers/xorshift.pdf>
 
-class PRNG {
+class PRNG
+{
+    uint64_t s;
 
-  uint64_t s;
+    uint64_t rand64()
+    {
 
-  uint64_t rand64() {
-
-    s ^= s >> 12, s ^= s << 25, s ^= s >> 27;
-    return s * 2685821657736338717LL;
-  }
+        s ^= s >> 12, s ^= s << 25, s ^= s >> 27;
+        return s * 2685821657736338717LL;
+    }
 
 public:
-  PRNG(uint64_t seed) : s(seed) { assert(seed); }
+    PRNG(uint64_t seed) : s(seed)
+    {
+        assert(seed);
+    }
 
-  template<typename T> T rand() { return T(rand64()); }
+    template<typename T> T rand()
+    {
+        return T(rand64());
+    }
 
-  /// Special generator used to fast init magic numbers.
-  /// Output values only have 1/8th of their bits set on average.
-  template<typename T> T sparse_rand()
-  { return T(rand64() & rand64() & rand64()); }
+    /// Special generator used to fast init magic numbers.
+    /// Output values only have 1/8th of their bits set on average.
+    template<typename T> T sparse_rand()
+    {
+        return T(rand64() & rand64() & rand64());
+    }
 };
 
 
@@ -117,8 +136,9 @@ public:
 /// called to set group affinity for each thread. Original code from Texel by
 /// Peter Österlund.
 
-namespace WinProcGroup {
-  void bindThisThread(size_t idx);
+namespace WinProcGroup
+{
+void bindThisThread(size_t idx);
 }
 
 #endif // #ifndef MISC_H_INCLUDED

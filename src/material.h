@@ -27,7 +27,8 @@
 #include "position.h"
 #include "types.h"
 
-namespace Material {
+namespace Material
+{
 
 } // namespace Material
 

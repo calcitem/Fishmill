@@ -24,7 +24,8 @@
 #include "types.h"
 #include "bitboard.h"
 
-namespace PSQT {
+namespace PSQT
+{
 
 #define S(mg, eg) make_score(mg, eg)
 
@@ -43,7 +44,8 @@ constexpr Score Bonus[][RANK_NB][int(FILE_NB) / 2] = {
 // init() initializes piece-square tables: the white halves of the tables are
 // copied from Bonus[] adding the piece value, then the black halves of the
 // tables are initialized by flipping and changing the sign of the white scores.
-void init() {
+void init()
+{
 
 }
 

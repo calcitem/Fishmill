@@ -35,35 +35,33 @@ Bitboard LineBB[SQUARE_NB][SQUARE_NB];
 /// Bitboards::pretty() returns an ASCII representation of a bitboard suitable
 /// to be printed to standard output. Useful for debugging.
 
-const std::string Bitboards::pretty(Bitboard b) {
+const std::string Bitboards::pretty(Bitboard b)
+{
+    std::string s = "+---+---+---+---+---+---+---+---+\n";
 
-  std::string s = "+---+---+---+---+---+---+---+---+\n";
+    for (Rank r = RANK_8; r >= RANK_1; --r) {
+        for (File f = FILE_A; f <= FILE_C; ++f)
+            s += b & make_square(f, r) ? "| X " : "|   ";
 
-  for (Rank r = RANK_8; r >= RANK_1; --r)
-  {
-      for (File f = FILE_A; f <= FILE_C; ++f)
-          s += b & make_square(f, r) ? "| X " : "|   ";
+        s += "|\n+---+---+---+---+---+---+---+---+\n";
+    }
 
-      s += "|\n+---+---+---+---+---+---+---+---+\n";
-  }
-
-  return s;
+    return s;
 }
 
 
 /// Bitboards::init() initializes various bitboard tables. It is called at
 /// startup and relies on global objects to be already zero-initialized.
 
-void Bitboards::init() {
+void Bitboards::init()
+{
+    for (unsigned i = 0; i < (1 << 16); ++i)
+        PopCnt16[i] = (uint8_t)std::bitset<16>(i).count();
 
-  for (unsigned i = 0; i < (1 << 16); ++i)
-      PopCnt16[i] = (uint8_t)std::bitset<16>(i).count();
+    for (Square s = SQ_A1; s <= SQ_C8; ++s)
+        SquareBB[s] = (1ULL << s);
 
-  for (Square s = SQ_A1; s <= SQ_C8; ++s)
-      SquareBB[s] = (1ULL << s);
-
-  for (Square s1 = SQ_A1; s1 <= SQ_C8; ++s1)
-      for (Square s2 = SQ_A1; s2 <= SQ_C8; ++s2)
-          SquareDistance[s1][s2] = (uint8_t)std::max(distance<File>(s1, s2), distance<Rank>(s1, s2));
+    for (Square s1 = SQ_A1; s1 <= SQ_C8; ++s1)
+        for (Square s2 = SQ_A1; s2 <= SQ_C8; ++s2)
+            SquareDistance[s1][s2] = (uint8_t)std::max(distance<File>(s1, s2), distance<Rank>(s1, s2));
 }
-

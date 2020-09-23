@@ -28,7 +28,8 @@
 
 using namespace std;
 
-namespace {
+namespace
+{
 
 const vector<string> Defaults = {
   "setoption name UCI_Chess960 value false",
@@ -102,56 +103,53 @@ const vector<string> Defaults = {
 /// bench 64 1 100000 default nodes -> search default positions for 100K nodes each
 /// bench 16 1 5 default perft -> run a perft 5 on default positions
 
-vector<string> setup_bench(const Position& current, istream& is) {
+vector<string> setup_bench(const Position &current, istream &is)
+{
+    vector<string> fens, list;
+    string go, token;
 
-  vector<string> fens, list;
-  string go, token;
+    // Assign default values to missing arguments
+    string ttSize = (is >> token) ? token : "16";
+    string threads = (is >> token) ? token : "1";
+    string limit = (is >> token) ? token : "13";
+    string fenFile = (is >> token) ? token : "default";
+    string limitType = (is >> token) ? token : "depth";
 
-  // Assign default values to missing arguments
-  string ttSize    = (is >> token) ? token : "16";
-  string threads   = (is >> token) ? token : "1";
-  string limit     = (is >> token) ? token : "13";
-  string fenFile   = (is >> token) ? token : "default";
-  string limitType = (is >> token) ? token : "depth";
+    go = limitType == "eval" ? "eval" : "go " + limitType + " " + limit;
 
-  go = limitType == "eval" ? "eval" : "go " + limitType + " " + limit;
+    if (fenFile == "default")
+        fens = Defaults;
 
-  if (fenFile == "default")
-      fens = Defaults;
+    else if (fenFile == "current")
+        fens.push_back(current.fen());
 
-  else if (fenFile == "current")
-      fens.push_back(current.fen());
+    else {
+        string fen;
+        ifstream file(fenFile);
 
-  else
-  {
-      string fen;
-      ifstream file(fenFile);
+        if (!file.is_open()) {
+            cerr << "Unable to open file " << fenFile << endl;
+            exit(EXIT_FAILURE);
+        }
 
-      if (!file.is_open())
-      {
-          cerr << "Unable to open file " << fenFile << endl;
-          exit(EXIT_FAILURE);
-      }
+        while (getline(file, fen))
+            if (!fen.empty())
+                fens.push_back(fen);
 
-      while (getline(file, fen))
-          if (!fen.empty())
-              fens.push_back(fen);
+        file.close();
+    }
 
-      file.close();
-  }
+    list.emplace_back("setoption name Threads value " + threads);
+    list.emplace_back("setoption name Hash value " + ttSize);
+    list.emplace_back("ucinewgame");
 
-  list.emplace_back("setoption name Threads value " + threads);
-  list.emplace_back("setoption name Hash value " + ttSize);
-  list.emplace_back("ucinewgame");
+    for (const string &fen : fens)
+        if (fen.find("setoption") != string::npos)
+            list.emplace_back(fen);
+        else {
+            list.emplace_back("position fen " + fen);
+            list.emplace_back(go);
+        }
 
-  for (const string& fen : fens)
-      if (fen.find("setoption") != string::npos)
-          list.emplace_back(fen);
-      else
-      {
-          list.emplace_back("position fen " + fen);
-          list.emplace_back(go);
-      }
-
-  return list;
+    return list;
 }

@@ -25,44 +25,54 @@
 #include "endgame.h"
 #include "movegen.h"
 
-namespace {
+namespace
+{
 
-  // Used to drive the king towards the edge of the board
-  // in KX vs K and KQ vs KR endgames.
-  inline int push_to_edge(Square s) {
-      int rd = edge_distance(rank_of(s)), fd = edge_distance(file_of(s));
-      return 90 - (7 * fd * fd / 2 + 7 * rd * rd / 2);
-  }
+// Used to drive the king towards the edge of the board
+// in KX vs K and KQ vs KR endgames.
+inline int push_to_edge(Square s)
+{
+    int rd = edge_distance(rank_of(s)), fd = edge_distance(file_of(s));
+    return 90 - (7 * fd * fd / 2 + 7 * rd * rd / 2);
+}
 
-  // Used to drive the king towards A1H8 corners in KBN vs K endgames.
-  inline int push_to_corner(Square s) {
-      return abs(7 - rank_of(s) - file_of(s));
-  }
+// Used to drive the king towards A1H8 corners in KBN vs K endgames.
+inline int push_to_corner(Square s)
+{
+    return abs(7 - rank_of(s) - file_of(s));
+}
 
-  // Drive a piece close to or away from another piece
-  inline int push_close(Square s1, Square s2) { return 140 - 20 * distance(s1, s2); }
-  inline int push_away(Square s1, Square s2) { return 120 - push_close(s1, s2); }
+// Drive a piece close to or away from another piece
+inline int push_close(Square s1, Square s2)
+{
+    return 140 - 20 * distance(s1, s2);
+}
+inline int push_away(Square s1, Square s2)
+{
+    return 120 - push_close(s1, s2);
+}
 
-  // Map the square as if strongSide is white and strongSide's only pawn
-  // is on the left half of the board.
-  Square normalize(const Position& pos, Color strongSide, Square sq) {
-
+// Map the square as if strongSide is white and strongSide's only pawn
+// is on the left half of the board.
+Square normalize(const Position &pos, Color strongSide, Square sq)
+{
     assert(pos.count<STONE>(strongSide) == 1);
 
     if (file_of(pos.square<STONE>(strongSide)) >= FILE_C)
         sq = flip_file(sq);
 
     return strongSide == WHITE ? sq : flip_rank(sq);
-  }
+}
 
 } // namespace
 
 
-namespace Endgames {
+namespace Endgames
+{
+std::pair<Map<Value>, Map<ScaleFactor>> maps;
 
-  std::pair<Map<Value>, Map<ScaleFactor>> maps;
+void init()
+{
 
-  void init() {
-
-  }
+}
 }

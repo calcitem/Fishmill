@@ -27,10 +27,12 @@
 
 using namespace std;
 
-namespace {
+namespace
+{
 
 } // namespace
 
-namespace Material {
+namespace Material
+{
 
 } // namespace Material
