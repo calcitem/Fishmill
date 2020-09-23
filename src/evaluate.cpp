@@ -269,7 +269,7 @@ Value Evaluation<T>::value()
     v = mg_value(score)
         + eg_value(score);
 
-    v /= PHASE_MIDGAME;
+    //v /= PHASE_MIDGAME;   // TODO
 
     // In case of tracing add all remaining individual evaluation terms
     if (T) {

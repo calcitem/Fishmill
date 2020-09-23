@@ -100,9 +100,9 @@ constexpr bool Is64Bit = false;
 #endif
 
 typedef uint64_t Key;
-typedef uint64_t Bitboard;
+typedef uint32_t Bitboard;
 
-constexpr int MAX_MOVES = 256;
+constexpr int MAX_MOVES = 64;
 constexpr int MAX_PLY = 246;
 
 /// A move needs 16 bits to be stored
@@ -128,19 +128,49 @@ enum MoveType
     MOVETYPE_PLACE,
     MOVETYPE_MOVE,
     MOVETYPE_REMOVE,
-    NORMAL,   // TODO
+    NORMAL, // TODO
 };
 
-enum Color
+enum Color : uint8_t
 {
-    NOCOLOR, BLACK, WHITE, COLOR_NB = 3
+    NOCOLOR = 0,
+    BLACK = 1,
+    WHITE = 2,
+    COLOR_NB = 3,
+    DRAW = 4,
+    NOBODY = 8
 };
 
-enum Phase
+enum Phase : uint16_t
 {
-    PHASE_ENDGAME,
-    PHASE_MIDGAME = 128,
-    MG = 0, EG = 1, PHASE_NB = 2
+    PHASE_NONE = 0,
+    PHASE_READY = 1,
+    PHASE_PLACING = 1 << 1,
+    PHASE_MOVING = 1 << 2,
+    PHASE_GAMEOVER = 1 << 3,
+    PHASE_PLAYING = PHASE_PLACING | PHASE_MOVING,
+    PHASE_NOTPLAYING = PHASE_READY | PHASE_GAMEOVER,
+};
+
+enum Action : uint16_t
+{
+    ACTION_NONE = 0x0000,
+    ACTION_SELECT = 0x0100,
+    ACTION_PLACE = 0x0200,
+    ACTION_REMOVE = 0x0400
+};
+
+enum GameOverReason
+{
+    NO_REASON,
+    LOSE_REASON_LESS_THAN_THREE,
+    LOSE_REASON_NO_WAY,
+    LOSE_REASON_BOARD_IS_FULL,
+    LOSE_REASON_RESIGN,
+    LOSE_REASON_TIME_OVER,
+    DRAW_REASON_THREEFOLD_REPETITION,
+    DRAW_REASON_RULE_50,
+    DRAW_REASON_BOARD_IS_FULL,
 };
 
 enum ScaleFactor
@@ -163,10 +193,12 @@ enum Value : int
 {
     VALUE_ZERO = 0,
     VALUE_DRAW = 0,
-    VALUE_KNOWN_WIN = 10000,
-    VALUE_MATE = 32000,
-    VALUE_INFINITE = 32001,
-    VALUE_NONE = 32002,
+    VALUE_KNOWN_WIN = 20,
+    VALUE_UNIQUE = 60,
+    VALUE_MATE = 80,
+    VALUE_INFINITE = 125,
+    VALUE_UNKNOWN = std::numeric_limits<int8_t>::min(),
+    VALUE_NONE = VALUE_UNKNOWN,
 
     VALUE_TB_WIN_IN_MAX_PLY = VALUE_MATE - 2 * MAX_PLY,
     VALUE_TB_LOSS_IN_MAX_PLY = -VALUE_TB_WIN_IN_MAX_PLY,
@@ -174,19 +206,65 @@ enum Value : int
     VALUE_MATED_IN_MAX_PLY = -VALUE_MATE_IN_MAX_PLY,
 
     StoneValue = 5,
+    VALUE_EACH_PIECE = StoneValue,
+    VALUE_EACH_PIECE_INHAND = VALUE_EACH_PIECE,
+    VALUE_EACH_PIECE_ONBOARD = VALUE_EACH_PIECE,
+    VALUE_EACH_PIECE_PLACING_NEEDREMOVE = VALUE_EACH_PIECE,
+    VALUE_EACH_PIECE_MOVING_NEEDREMOVE = VALUE_EACH_PIECE,
+
+    VALUE_MTDF_WINDOW = VALUE_EACH_PIECE,
+    VALUE_PVS_WINDOW = VALUE_EACH_PIECE,
+
+    VALUE_PLACING_WINDOW = VALUE_EACH_PIECE_PLACING_NEEDREMOVE + (VALUE_EACH_PIECE_ONBOARD - VALUE_EACH_PIECE_INHAND) + 1,
+    VALUE_MOVING_WINDOW = VALUE_EACH_PIECE_MOVING_NEEDREMOVE + 1,
+
     Tempo = 0,
 
-    MidgameLimit = 15258, EndgameLimit = 3915
 };
 
-enum PieceType
+enum Rating : int8_t
 {
-    NO_PIECE_TYPE, BLACK_STONE, WHITE_STONE, STONE, BAN,
-    ALL_PIECES = 0,
-    PIECE_TYPE_NB = 4
+    RATING_ZERO = 0,
+
+    RATING_BLOCK_ONE_MILL = 10,
+    RATING_ONE_MILL = 11,
+
+    RATING_STAR_SQUARE = 11,
+
+    RATING_BLOCK_TWO_MILLS = RATING_BLOCK_ONE_MILL * 2,
+    RATING_TWO_MILLS = RATING_ONE_MILL * 2,
+
+    RATING_BLOCK_THREE_MILLS = RATING_BLOCK_ONE_MILL * 3,
+    RATING_THREE_MILLS = RATING_ONE_MILL * 3,
+
+    RATING_REMOVE_ONE_MILL = RATING_ONE_MILL,
+    RATING_REMOVE_TWO_MILLS = RATING_TWO_MILLS,
+    RATING_REMOVE_THREE_MILLS = RATING_THREE_MILLS,
+
+    RATING_REMOVE_THEIR_ONE_MILL = -RATING_REMOVE_ONE_MILL,
+    RATING_REMOVE_THEIR_TWO_MILLS = -RATING_REMOVE_TWO_MILLS,
+    RATING_REMOVE_THEIR_THREE_MILLS = -RATING_REMOVE_THREE_MILLS,
+
+    RATING_TT = 100,
+    RATING_MAX = std::numeric_limits<int8_t>::max(),
 };
 
-enum Piece
+enum PieceType : uint16_t
+{
+    NO_PIECE_TYPE = 0,
+    BLACK_STONE = 1,
+    WHITE_STONE = 2,
+    BAN = 3,
+    ALL_PIECES = 0,
+    PIECE_TYPE_NB = 4,
+
+    STONE  = 5,
+
+    IN_HAND = 0x10,
+    ON_BOARD = 0x20,
+};
+
+enum Piece : uint8_t
 {
     NO_PIECE = 0x00,
     BAN_STONE = 0x0F,
@@ -228,6 +306,7 @@ typedef int Depth;
 
 enum : int
 {
+
     DEPTH_QS_CHECKS = 0,
     DEPTH_QS_NO_CHECKS = -1,
     DEPTH_QS_RECAPTURES = -5,
@@ -236,7 +315,7 @@ enum : int
     DEPTH_OFFSET = DEPTH_NONE
 };
 
-enum Square : int
+enum Square : int32_t
 {
     SQ_0 = 0, SQ_1 = 1, SQ_2 = 2, SQ_3 = 3, SQ_4 = 4, SQ_5 = 5, SQ_6 = 6, SQ_7 = 7,
     SQ_8 = 8, SQ_9 = 9, SQ_10 = 10, SQ_11 = 11, SQ_12 = 12, SQ_13 = 13, SQ_14 = 14, SQ_15 = 15,
@@ -258,6 +337,7 @@ enum Square : int
     SQ_BEGIN = SQ_8,
     SQ_END = SQ_32
 };
+
 
 enum Direction : int
 {
@@ -371,19 +451,22 @@ ENABLE_BASE_OPERATORS_ON(Score)
 #undef ENABLE_INCR_OPERATORS_ON
 #undef ENABLE_BASE_OPERATORS_ON
 
-/// Additional operators to add integers to a Value
+// Additional operators to add integers to a Value
 constexpr Value operator+(Value v, int i)
 {
     return Value(int(v) + i);
 }
+
 constexpr Value operator-(Value v, int i)
 {
     return Value(int(v) - i);
 }
+
 inline Value &operator+=(Value &v, int i)
 {
     return v = v + i;
 }
+
 inline Value &operator-=(Value &v, int i)
 {
     return v = v - i;
@@ -467,13 +550,18 @@ constexpr Value mated_in(int ply)
 
 constexpr Square make_square(File f, Rank r)
 {
-    return Square(((r + 1) << 3) + f);
+    return Square((f << 3) + r - 1);
+}
+
+constexpr Piece make_piece(Color c)
+{
+    return Piece(c << 4);
 }
 
 constexpr Piece make_piece(Color c, PieceType pt)
 {
     if (pt == BLACK_STONE || pt == WHITE_STONE) {
-        return Piece((c << 4));
+        return make_piece(c);
     }
 
     if (pt == BAN) {
@@ -486,7 +574,7 @@ constexpr Piece make_piece(Color c, PieceType pt)
 constexpr PieceType type_of(Piece pc)
 {
     if (pc & 0x30) {
-        return STONE;
+        //return STONE; // TODO
     }
 
     if (pc == BAN_STONE) {
@@ -509,12 +597,12 @@ constexpr bool is_ok(Square s)
 
 constexpr File file_of(Square s)
 {
-    return File((s >> 3) - 1);
+    return File(s >> 3);
 }
 
 constexpr Rank rank_of(Square s)
 {
-    return Rank(s & 7);
+    return Rank((s & 0x07) + 1);
 }
 
 constexpr Square relative_square(Color c, Square s)
@@ -534,7 +622,7 @@ constexpr Rank relative_rank(Color c, Square s)
 
 constexpr Square from_sq(Move m)
 {
-    return Square(m >> 8);
+    return static_cast<Square>(m >> 8);
 }
 
 constexpr Square to_sq(Move m)
