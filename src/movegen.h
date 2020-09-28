@@ -23,6 +23,7 @@
 #define MOVEGEN_H_INCLUDED
 
 #include <algorithm>
+#include <array>
 
 #include "types.h"
 
@@ -87,6 +88,17 @@ struct MoveList
     {
         return std::find(begin(), end(), move) != end();
     }
+
+    static void create();
+    static void shuffle();
+
+    inline static std::array<Square, FILE_NB *RANK_NB> movePriorityTable {
+        SQ_8, SQ_9, SQ_10, SQ_11, SQ_12, SQ_13, SQ_14, SQ_15,
+        SQ_16, SQ_17, SQ_18, SQ_19, SQ_20, SQ_21, SQ_22, SQ_23,
+        SQ_24, SQ_25, SQ_26, SQ_27, SQ_28, SQ_29, SQ_30, SQ_31,
+    };
+
+    inline static Move moveTable[SQUARE_NB][MD_NB] = { {MOVE_NONE} };
 
 private:
     ExtMove moveList[MAX_MOVES], *last;
