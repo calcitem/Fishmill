@@ -30,7 +30,7 @@
 #include "uci.h"
 #include "syzygy/tbprobe.h"
 
-#ifdef TBPROBE
+//#ifdef TBPROBE
 
 namespace PSQT
 {
@@ -56,4 +56,4 @@ int main(int argc, char *argv[])
     Threads.set(0);
     return 0;
 }
-#endif
+//#endif
