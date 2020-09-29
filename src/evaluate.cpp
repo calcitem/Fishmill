@@ -100,7 +100,7 @@ class Evaluation
 
 public:
     Evaluation() = delete;
-    explicit Evaluation(const Position &p) : pos(p)
+    explicit Evaluation(/* const */ Position &p) : pos(p)
     {
     }
     Evaluation &operator=(const Evaluation &) = delete;
@@ -113,7 +113,7 @@ private:
     template<Color Us> Score space() const;
     Score initiative(Score score) const;
 
-    const Position &pos;
+    /* const */ Position &pos;
     Bitboard mobilityArea[COLOR_NB];
     Score mobility[COLOR_NB] = { SCORE_ZERO, SCORE_ZERO };
 
@@ -240,44 +240,95 @@ Score Evaluation<T>::initiative(Score score) const
 template<Tracing T>
 Value Evaluation<T>::value()
 {
-    // Initialize score by reading the incrementally updated scores included in
-    // the position object (material + piece square tables) and the material
-    // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.this_thread()->contempt;
+    Value value = VALUE_ZERO;
 
-    // Early exit if score is high
-    Value v = (mg_value(score) + eg_value(score)) / 2;
-    if (abs(v) > LazyThreshold)
-        return pos.side_to_move() == WHITE ? v : -v;
+    int nPiecesInHandDiff;
+    int nPiecesOnBoardDiff;
+    int pieceCountNeedRemove;
 
-    // Main evaluation begins here
+    switch (pos.get_phase()) {
+    case PHASE_READY:
+        break;
 
-    initialize<WHITE>();
-    initialize<BLACK>();
+    case PHASE_PLACING:
+        nPiecesInHandDiff = pos.pieces_count_in_hand(BLACK) - pos.pieces_count_in_hand(WHITE);
+        value += nPiecesInHandDiff * VALUE_EACH_PIECE_INHAND;
 
-    // Pieces evaluated first (also populates attackedBy, attackedBy2).
-    // Note that the order of evaluation of the terms is left unspecified
-    score += mobility[WHITE] - mobility[BLACK];
+        nPiecesOnBoardDiff = pos.pieces_count_on_board(BLACK) - pos.pieces_count_on_board(WHITE);
+        value += nPiecesOnBoardDiff * VALUE_EACH_PIECE_ONBOARD;
 
-    // More complex interactions that require fully populated attack bitboards
-    score += threats<WHITE>() - threats<BLACK>()
-        + space<  WHITE>() - space<  BLACK>();
+        switch (pos.get_action()) {
+        case ACTION_SELECT:
+        case ACTION_PLACE:
+            break;
 
-    score += initiative(score);
+        case ACTION_REMOVE:
+            pieceCountNeedRemove = (pos.side_to_move() == BLACK) ?
+                pos.piece_count_need_remove() : -(pos.piece_count_need_remove());
+            value += pieceCountNeedRemove * VALUE_EACH_PIECE_PLACING_NEEDREMOVE;
+            break;
+        default:
+            break;
+        }
 
-    // Interpolate between a middlegame and a (scaled by 'sf') endgame score
-    v = mg_value(score)
-        + eg_value(score);
+        break;
 
-    //v /= PHASE_MIDGAME;   // TODO
+    case PHASE_MOVING:
+        value = pos.pieces_count_on_board(BLACK) * VALUE_EACH_PIECE_ONBOARD -
+            pos.pieces_count_on_board(WHITE) * VALUE_EACH_PIECE_ONBOARD;
 
-    // In case of tracing add all remaining individual evaluation terms
-    if (T) {
-        Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
-        Trace::add(TOTAL, score);
+#ifdef EVALUATE_MOBILITY
+        value += pos.get_mobility_diff(position->turn, position->pieceCountInHand[BLACK], position->pieceCountInHand[WHITE], false) * 10;
+#endif  /* EVALUATE_MOBILITY */
+
+        switch (pos.get_action()) {
+        case ACTION_SELECT:
+        case ACTION_PLACE:
+            break;
+
+        case ACTION_REMOVE:
+            pieceCountNeedRemove = (pos.side_to_move() == BLACK) ?
+                pos.piece_count_need_remove() : -(pos.piece_count_need_remove());
+            value += pieceCountNeedRemove * VALUE_EACH_PIECE_MOVING_NEEDREMOVE;
+            break;
+        default:
+            break;
+        }
+
+        break;
+
+    case PHASE_GAMEOVER:
+        if (pos.pieces_count_on_board(BLACK) + pos.pieces_count_on_board(WHITE) >=
+            RANK_NB * FILE_NB) {
+            if (rule.isBlackLosebutNotDrawWhenBoardFull) {
+                value -= VALUE_MATE;
+            } else {
+                value = VALUE_DRAW;
+            }
+        } else if (pos.get_action() == ACTION_SELECT &&
+                   pos.is_all_surrounded() &&
+                   rule.isLoseButNotChangeSideWhenNoWay) {
+            Value delta = pos.side_to_move() == BLACK ? -VALUE_MATE : VALUE_MATE;
+            value += delta;
+        }
+
+        else if (pos.pieces_count_on_board(BLACK) < rule.nPiecesAtLeast) {
+            value -= VALUE_MATE;
+        } else if (pos.pieces_count_on_board(WHITE) < rule.nPiecesAtLeast) {
+            value += VALUE_MATE;
+        }
+
+        break;
+
+    default:
+        break;
     }
 
-    return  (pos.side_to_move() == WHITE ? v : -v) + Tempo; // Side to move point of view
+    if (pos.side_to_move() == WHITE) {
+        value = -value;
+    }
+
+    return value;
 }
 
 } // namespace
@@ -286,7 +337,7 @@ Value Evaluation<T>::value()
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
 
-Value Eval::evaluate(const Position &pos)
+Value Eval::evaluate(/* const */ Position &pos)
 {
     return Evaluation<NO_TRACE>(pos).value();
 }
@@ -296,7 +347,7 @@ Value Eval::evaluate(const Position &pos)
 /// a string (suitable for outputting to stdout) that contains the detailed
 /// descriptions and values of each evaluation term. Useful for debugging.
 
-std::string Eval::trace(const Position &pos)
+std::string Eval::trace(/* const */ Position &pos)
 {
     std::memset(scores, 0, sizeof(scores));
 
