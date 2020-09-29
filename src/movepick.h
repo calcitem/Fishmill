@@ -30,6 +30,7 @@
 #include "position.h"
 #include "types.h"
 
+
 /// StatsEntry stores the stat table value. It is usually a number but could
 /// be a move or even a nested history. We use a class instead of naked value
 /// to directly call history update operator<<() on the entry so to use stats
@@ -186,6 +187,13 @@ private:
     Depth depth;
     int ply;
     ExtMove moves[MAX_MOVES];
+
+    int moveCount{ 0 };
+
+    int move_count()
+    {
+        return moveCount;
+    }
 };
 
 #endif // #ifndef MOVEPICK_H_INCLUDED
