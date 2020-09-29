@@ -29,7 +29,7 @@
 
 #include "bitboard.h"
 #include "types.h"
-
+#include "rule.h"
 
 /// StateInfo struct stores information needed to restore a Position object to
 /// its previous state when we retract a move. Whenever a move is made on the
@@ -83,6 +83,7 @@ public:
     Bitboard pieces(Color c, PieceType pt) const;
     Bitboard pieces(Color c, PieceType pt1, PieceType pt2) const;
     Piece piece_on(Square s) const;
+    Color color_on(Square s) const;
     bool empty(Square s) const;
     template<PieceType Pt> int count(Color c) const;
     template<PieceType Pt> int count() const;
@@ -109,6 +110,11 @@ public:
     // Accessing hash keys
     Key key() const;
     Key key_after(Move m) const;
+    void construct_key();
+    Key revert_key(Square s);
+    Key update_key(Square s);
+    Key update_key_misc();
+    Key next_primary_key(Move m);
 
     // Other properties of the position
     Color side_to_move() const;
@@ -122,6 +128,53 @@ public:
     // Position consistency check, for debugging
     bool pos_is_ok() const;
     void flip();
+
+    /// Mill Game
+
+    int set_position(const struct Rule *rule);
+
+    Piece *get_board() const;
+    Square current_square() const;
+    int get_step() const;
+    enum Phase get_phase() const;
+    enum Action get_action() const;
+    const char *cmd_line() const;
+
+    bool reset();
+    bool start();
+    bool resign(Color loser);
+    bool command(const char *cmd);
+    int update();
+    void update_score();
+    bool check_gameover_condition();
+    void remove_ban_stones();
+    void set_side_to_move(Color c);
+  
+    void change_side_to_move();
+    Color get_winner() const;
+    void set_gameover(Color w, GameOverReason reason);
+
+#if 0
+    void mirror(std::vector <std::string> &cmdlist, bool cmdChange = true);
+    void turn(std::vector <std::string> &cmdlist, bool cmdChange = true);
+    void rotate(std::vector <std::string> &cmdlist, int degrees, bool cmdChange = true);
+#endif
+
+    void create_mill_table();
+    int add_mills(Square s);
+    int in_how_many_mills(Square s, Color c, Square squareSelected = SQ_0);
+    bool is_all_in_mills(Color c);
+
+    int surrounded_empty_squares_count(Square s, bool includeFobidden);
+    void surrounded_pieces_count(Square s, int &nOurPieces, int &nTheirPieces, int &nBanned, int &nEmpty);
+    bool is_all_surrounded() const;
+
+    static void print_board();
+
+    int pieces_on_board_count();
+    int pieces_in_hand_count();
+
+    static bool is_star_square(Square s);
 
 private:
     // Initialization helpers (used while setting up a position)
