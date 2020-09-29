@@ -42,7 +42,7 @@ namespace
 {
 
 // FEN string of the initial position, normal mill game
-const char *StartFEN = "oooooooo/oooooooo/oooooooo b p 0 1"; // Chess: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const char *StartFEN = "********/********/******** b p 0 1"; // Chess: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 
 // position() is called when engine receives the "position" UCI command.
@@ -265,11 +265,11 @@ string UCI::value(Value v)
 }
 
 
-/// UCI::square() converts a Square to a string in algebraic notation (c1, a7, etc.)
+/// UCI::square() converts a Square to a string in algebraic notation ((1,2), etc.)
 
 std::string UCI::square(Square s)
 {
-    return std::string{ char('a' + file_of(s)), char('1' + rank_of(s)) };
+    return std::string{ char('('), char('0' + file_of(s)), char(','), char('0' + rank_of(s)), char(')') };
 }
 
 
@@ -280,7 +280,8 @@ std::string UCI::square(Square s)
 
 string UCI::move(Move m)
 {
-    Square from = from_sq(m);
+    string move;
+
     Square to = to_sq(m);
 
     if (m == MOVE_NONE)
@@ -289,7 +290,14 @@ string UCI::move(Move m)
     if (m == MOVE_NULL)
         return "0000";
 
-    string move = UCI::square(from) + UCI::square(to);
+    if (m < 0) {
+        move = "-" + UCI::square(to);
+    } else if (m & 0x7f00) {
+        Square from = from_sq(m);
+        move = UCI::square(from) + "->" + UCI::square(to);
+    } else {
+        move = UCI::square(to);
+    }
 
     return move;
 }
