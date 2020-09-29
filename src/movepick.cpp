@@ -57,7 +57,7 @@ void partial_insertion_sort(ExtMove *begin, ExtMove *end, int limit)
 /// ordering is at the current node.
 
 /// MovePicker constructor for the main search
-MovePicker::MovePicker(const Position &p, Move ttm, Depth d, const ButterflyHistory *mh, const LowPlyHistory *lp,
+MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, const ButterflyHistory *mh, const LowPlyHistory *lp,
                        const CapturePieceToHistory *cph, const PieceToHistory **ch, Move cm, Move *killers, int pl)
     : pos(p), mainHistory(mh), lowPlyHistory(lp), captureHistory(cph), continuationHistory(ch),
     ttMove(ttm), refutations{ {killers[0], 0}, {killers[1], 0}, {cm, 0} }, depth(d), ply(pl) {
@@ -69,7 +69,7 @@ MovePicker::MovePicker(const Position &p, Move ttm, Depth d, const ButterflyHist
 }
 
 /// MovePicker constructor for quiescence search
-MovePicker::MovePicker(const Position &p, Move ttm, Depth d, const ButterflyHistory *mh,
+MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, const ButterflyHistory *mh,
                        const CapturePieceToHistory *cph, const PieceToHistory **ch, Square rs)
     : pos(p), mainHistory(mh), captureHistory(cph), continuationHistory(ch), ttMove(ttm), recaptureSquare(rs), depth(d)
 {
@@ -82,7 +82,7 @@ MovePicker::MovePicker(const Position &p, Move ttm, Depth d, const ButterflyHist
 
 /// MovePicker constructor for ProbCut: we generate captures with SEE greater
 /// than or equal to the given threshold.
-MovePicker::MovePicker(const Position &p, Move ttm, Value th, const CapturePieceToHistory *cph)
+MovePicker::MovePicker(/* const */ Position &p, Move ttm, Value th, const CapturePieceToHistory *cph)
     : pos(p), captureHistory(cph), ttMove(ttm), threshold(th)
 {
     stage = PROBCUT_TT + !(ttm && pos.capture(ttm)
@@ -96,21 +96,100 @@ MovePicker::MovePicker(const Position &p, Move ttm, Value th, const CapturePiece
 template<GenType Type>
 void MovePicker::score()
 {
-    static_assert(Type == CAPTURES || Type == QUIETS, "Wrong type");
+    cur = moves;
 
-    for (auto &m : *this)
-        if (Type == CAPTURES)
-            m.value = int(PieceValue) * 6
-            + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
+    while (cur++->move != MOVE_NONE) {
+        Move m = cur->move;
 
-        else if (Type == QUIETS)
-            m.value = (*mainHistory)[pos.side_to_move()][from_to(m)]
-            + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
-            + 2 * (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
-            + 2 * (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
-            + (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
-            + (ply < MAX_LPH ? 4 * (*lowPlyHistory)[ply][from_to(m)] : 0);
+        Square sq = to_sq(m);
+        Square sqsrc = from_sq(m);
 
+        // if stat before moving, moving phrase maybe from @-0-@ to 0-@-@, but no mill, so need sqsrc to judge
+        int nOurMills = pos.in_how_many_mills(sq, pos.side_to_move(), sqsrc);
+        int nTheirMills = 0;
+
+#ifndef SORT_MOVE_WITHOUT_HUMAN_KNOWLEDGES
+        // TODO: rule.allowRemoveMultiPiecesWhenCloseMultiMill adapt other rules
+        if (type_of(m) != MOVETYPE_REMOVE) {
+            // all phrase, check if place sq can close mill
+            if (nOurMills > 0) {
+                cur->value += RATING_ONE_MILL * nOurMills;
+            } else if (pos.get_phase() == PHASE_PLACING) {
+                // placing phrase, check if place sq can block their close mill
+                nTheirMills = pos.in_how_many_mills(sq, ~pos.side_to_move());
+                cur->value += RATING_BLOCK_ONE_MILL * nTheirMills;
+            }
+#if 1
+            else if (pos.get_phase() == PHASE_MOVING) {
+                // moving phrase, check if place sq can block their close mill
+                nTheirMills = pos.in_how_many_mills(sq, ~pos.side_to_move());
+
+                if (nTheirMills) {
+                    int nOurPieces = 0;
+                    int nTheirPieces = 0;
+                    int nBanned = 0;
+                    int nEmpty = 0;
+
+                    pos.surrounded_pieces_count(sq, nOurPieces, nTheirPieces, nBanned, nEmpty);
+
+                    if (sq % 2 == 0 && nTheirPieces == 3) {
+                        cur->value += RATING_BLOCK_ONE_MILL * nTheirMills;
+                    } else if (sq % 2 == 1 && nTheirPieces == 2 && rule.nTotalPiecesEachSide == 12) {
+                        cur->value += RATING_BLOCK_ONE_MILL * nTheirMills;
+                    }
+                }
+            }
+#endif
+
+            //cur->value += nBanned;  // placing phrase, place nearby ban point
+
+            // for 12 men, white 's 2nd move place star point is as important as close mill (TODO)   
+            if (rule.nTotalPiecesEachSide == 12 &&
+                pos.count<ON_BOARD>(WHITE) < 2 &&    // patch: only when white's 2nd move
+                Position::is_star_square(static_cast<Square>(m))) {
+                cur->value += RATING_STAR_SQUARE;
+            }
+        } else { // Remove
+            int nOurPieces = 0;
+            int nTheirPieces = 0;
+            int nBanned = 0;
+            int nEmpty = 0;
+
+            pos.surrounded_pieces_count(sq, nOurPieces, nTheirPieces, nBanned, nEmpty);
+
+               if (nOurMills > 0) {
+                // remove point is in our mill
+                //cur->value += RATING_REMOVE_ONE_MILL * nOurMills;
+
+                if (nTheirPieces == 0) {
+                    // if remove point nearby has no their stone, preferred.
+                    cur->value += 1;
+                    if (nOurPieces > 0) {
+                        // if remove point nearby our stone, preferred
+                        cur->value += nOurPieces;
+                    }
+                }
+            }
+
+            // remove point is in their mill
+            nTheirMills = pos.in_how_many_mills(sq, ~pos.side_to_move());
+            if (nTheirMills) {
+                if (nTheirPieces >= 2) {
+                    // if nearby their piece, prefer do not remove
+                    cur->value -= nTheirPieces;
+
+                    if (nOurPieces == 0) {
+                        // if nearby has no our piece, more prefer do not remove
+                        cur->value -= 1;
+                    }
+                }
+            }
+
+            // prefer remove piece that mobility is strong 
+            cur->value += nEmpty;
+        }
+#endif // !SORT_MOVE_WITHOUT_HUMAN_KNOWLEDGES
+        }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -135,97 +214,11 @@ Move MovePicker::select(Pred filter)
 /// moves left, picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move(bool skipQuiets)
 {
-top:
-    switch (stage) {
+    endMoves = generate<LEGAL>(pos, moves);
+    moveCount = endMoves - moves;
 
-    case MAIN_TT:
-    case QSEARCH_TT:
-    case PROBCUT_TT:
-        ++stage;
-        return ttMove;
+    score<LEGAL>();
+    partial_insertion_sort(moves, endMoves, -100);    // TODO: limit = -3000 * depth
 
-    case CAPTURE_INIT:
-    case PROBCUT_INIT:
-    case QCAPTURE_INIT:
-        cur = endBadCaptures = moves;
-        endMoves = generate<CAPTURES>(pos, cur);
-
-        score<CAPTURES>();
-        ++stage;
-        goto top;
-
-    case GOOD_CAPTURE:
-        if (select<Best>([&]() {
-            return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
-                // Move losing capture to endBadCaptures to be tried later
-                true : (*endBadCaptures++ = *cur, false); }))
-            return *(cur - 1);
-
-            // Prepare the pointers to loop over the refutations array
-            cur = std::begin(refutations);
-            endMoves = std::end(refutations);
-
-            // If the countermove is the same as a killer, skip it
-            if (refutations[0].move == refutations[2].move
-                || refutations[1].move == refutations[2].move)
-                --endMoves;
-
-            ++stage;
-            /* fallthrough */
-
-    case REFUTATION:
-        if (select<Next>([&]() { return    *cur != MOVE_NONE
-                         && !pos.capture(*cur)
-                         && pos.pseudo_legal(*cur); }))
-            return *(cur - 1);
-        ++stage;
-        /* fallthrough */
-
-    case QUIET_INIT:
-        if (!skipQuiets) {
-            cur = endBadCaptures;
-            endMoves = generate<QUIETS>(pos, cur);
-
-            score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, -3000 * depth);
-        }
-
-        ++stage;
-        /* fallthrough */
-
-    case QUIET:
-        if (!skipQuiets
-            && select<Next>([&]() {return   *cur != refutations[0].move
-                            && *cur != refutations[1].move
-                            && *cur != refutations[2].move; }))
-            return *(cur - 1);
-
-        // Prepare the pointers to loop over the bad captures
-        cur = moves;
-        endMoves = endBadCaptures;
-
-        ++stage;
-        /* fallthrough */
-
-    case BAD_CAPTURE:
-        return select<Next>([]() { return true; });
-
-    case PROBCUT:
-        return select<Best>([&]() { return pos.see_ge(*cur, threshold); });
-
-    case QCAPTURE:
-        if (select<Best>([&]() { return   depth > DEPTH_QS_RECAPTURES
-                         || to_sq(*cur) == recaptureSquare; }))
-            return *(cur - 1);
-
-        // If we did not find any move and we do not try checks, we have finished
-        if (depth != DEPTH_QS_CHECKS)
-            return MOVE_NONE;
-
-        ++stage;
-        /* fallthrough */
-    }
-
-    assert(false);
-    return MOVE_NONE; // Silence warning
+    return *moves;
 }
