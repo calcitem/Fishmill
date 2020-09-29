@@ -26,10 +26,10 @@
 #include "misc.h"
 
 uint8_t PopCnt16[1 << 16];
-uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
+uint8_t SquareDistance[SQ_32][SQ_32];
 
-Bitboard SquareBB[SQUARE_NB];
-Bitboard LineBB[SQUARE_NB][SQUARE_NB];
+Bitboard SquareBB[SQ_32];
+Bitboard LineBB[EFFECTIVE_SQUARE_NB][SQ_32];
 
 
 /// Bitboards::pretty() returns an ASCII representation of a bitboard suitable
@@ -58,10 +58,10 @@ void Bitboards::init()
     for (unsigned i = 0; i < (1 << 16); ++i)
         PopCnt16[i] = (uint8_t)std::bitset<16>(i).count();
 
-    for (Square s = SQ_A1; s <= SQ_C8; ++s)
+    for (Square s = SQ_BEGIN; s <= SQ_END; ++s)
         SquareBB[s] = (1ULL << s);
 
-    for (Square s1 = SQ_A1; s1 <= SQ_C8; ++s1)
-        for (Square s2 = SQ_A1; s2 <= SQ_C8; ++s2)
+    for (Square s1 = SQ_BEGIN; s1 <= SQ_END; ++s1)
+        for (Square s2 = SQ_BEGIN; s2 <= SQ_END; ++s2)
             SquareDistance[s1][s2] = (uint8_t)std::max(distance<File>(s1, s2), distance<Rank>(s1, s2));
 }

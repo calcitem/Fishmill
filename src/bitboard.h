@@ -64,10 +64,10 @@ constexpr Bitboard Rank7BB = Rank1BB << (8 * 6);
 constexpr Bitboard Rank8BB = Rank1BB << (8 * 7);
 
 extern uint8_t PopCnt16[1 << 16];
-extern uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
+extern uint8_t SquareDistance[SQ_32][SQ_32];
 
-extern Bitboard SquareBB[SQUARE_NB];
-extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
+extern Bitboard SquareBB[SQ_32];
+extern Bitboard LineBB[EFFECTIVE_SQUARE_NB][SQ_32];
 extern Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
 extern Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 
