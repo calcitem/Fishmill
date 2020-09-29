@@ -190,13 +190,71 @@ private:
     Bitboard byTypeBB[PIECE_TYPE_NB];
     Bitboard byColorBB[COLOR_NB];
     int pieceCount[PIECE_NB];
-    Square pieceList[PIECE_NB][16];
+    // TODO: [0] is sum of Black and White
+    int pieceCountInHand[COLOR_NB] { 0 };
+    int pieceCountOnBoard[COLOR_NB] { 0 };
+    int pieceCountNeedRemove { 0 };
+    Square pieceList[PIECE_NB][16];     // TODO
     int index[SQUARE_NB];
     int gamePly;
     Color sideToMove;
     Score psq;
     Thread *thisThread;
     StateInfo *st;
+
+/// Mill Game
+    Color them { NOCOLOR };
+    Color winner;
+    GameOverReason gameoverReason { NO_REASON };
+
+    enum Phase phase {PHASE_NONE};
+    enum Action action;
+
+    int score[COLOR_NB] { 0 };
+    int score_draw { 0 };
+
+    static const int onBoard[SQUARE_NB];
+
+    // Relate to Rule
+    static int millTable[SQUARE_NB][LD_NB][FILE_NB - 1];
+
+    Square currentSquare;
+    int nPlayed { 0 };
+
+    char cmdline[64] { '\0' };
+
+    time_t startTime;
+    time_t currentTime;
+    time_t elapsedSeconds[COLOR_NB];    
+
+    /*
+        0x   00     00     00    00    00    00    00    00
+           unused unused piece1 square1 piece2 square2 piece3 square3
+    */
+
+    uint64_t millList[4];
+    int millListSize { 0 };
+
+    /*
+        0x   00    00
+            square1  square2
+        Placing:0x00??,?? is place location
+        Moving:0x__??,__ is from,?? is to
+        Removing:0xFF??,?? is neg
+
+        31 ----- 24 ----- 25
+        | \       |      / |
+        |  23 -- 16 -- 17  |
+        |  | \    |   / |  |
+        |  |  15 08 09  |  |
+        30-22-14    10-18-26
+        |  |  13 12 11  |  |
+        |  | /    |   \ |  |
+        |  21 -- 20 -- 19  |
+        | /       |     \  |
+        29 ----- 28 ----- 27
+    */
+    Move move { MOVE_NONE };
 };
 
 namespace PSQT
@@ -254,7 +312,13 @@ inline Bitboard Position::pieces(Color c, PieceType pt1, PieceType pt2) const
 
 template<PieceType Pt> inline int Position::count(Color c) const
 {
-    return pieceCount[make_piece(c, Pt)];
+    if (Pt == ON_BOARD) {
+        return pieceCountOnBoard[c];
+    } else if (Pt == IN_HAND) {
+        return pieceCountInHand[c];
+    }
+
+    return 0;
 }
 
 template<PieceType Pt> inline int Position::count() const
@@ -281,6 +345,11 @@ inline bool Position::is_on_semiopen_file(Color c, Square s) const
 inline Key Position::key() const
 {
     return st->key;
+}
+
+inline void Position::construct_key()
+{
+    st->key = 0;
 }
 
 inline int Position::game_ply() const
@@ -352,6 +421,33 @@ inline void Position::move_piece(Square from, Square to)
     board[to] = pc;
     index[to] = index[from];
     pieceList[pc][index[to]] = to;
+}
+
+/// Mill Game
+
+inline Piece *Position::get_board() const
+{
+    return (Piece *)board;
+}
+
+inline Square Position::current_square() const
+{
+    return currentSquare;
+}
+
+inline enum Phase Position::get_phase() const
+{
+    return phase;
+}
+
+inline enum Action Position::get_action() const
+{
+    return action;
+}
+
+inline const char *Position::cmd_line() const
+{
+    return cmdline;
 }
 
 #endif // #ifndef POSITION_H_INCLUDED
