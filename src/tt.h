@@ -67,8 +67,8 @@ struct TTEntry
 private:
     friend class TranspositionTable;
 
-    uint16_t key16;
-    uint16_t move16;
+    uint16_t key16; // TODO: uint32_t?
+    uint16_t move16; // TODO: uint32_t?
     int16_t  value16;
     int16_t  eval16;
     uint8_t  genBound8;
@@ -89,7 +89,7 @@ class TranspositionTable
     struct Cluster
     {
         TTEntry entry[ClusterSize];
-        char padding[2]; // Pad to 32 bytes
+        char padding[2]; // Pad to 32 bytes // TODO
     };
 
     static_assert(sizeof(Cluster) == 32, "Unexpected Cluster size");

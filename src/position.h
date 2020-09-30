@@ -67,7 +67,7 @@ class Position
 public:
     static void init();
 
-    Position() = default;
+    Position() /* = default */;
     Position(const Position &) = delete;
     Position &operator=(const Position &) = delete;
 
@@ -171,11 +171,16 @@ public:
 
     static void print_board();
 
+    int pieces_on_board_count();
+    int pieces_in_hand_count();
+
     int pieces_count_on_board(Color c);
     int pieces_count_in_hand(Color c);
     int piece_count_need_remove();
 
     static bool is_star_square(Square s);
+
+    bool select_piece(Square s);
 
 private:
     // Initialization helpers (used while setting up a position)
@@ -221,8 +226,6 @@ private:
 
     Square currentSquare;
     int nPlayed { 0 };
-
-    char cmdline[64] { '\0' };
 
     time_t startTime;
     time_t currentTime;
@@ -350,7 +353,7 @@ inline Key Position::key() const
 
 inline void Position::construct_key()
 {
-    st->key = 0;
+    //st->key = 0;  // TODO
 }
 
 inline int Position::game_ply() const
@@ -444,11 +447,6 @@ inline enum Phase Position::get_phase() const
 inline enum Action Position::get_action() const
 {
     return action;
-}
-
-inline const char *Position::cmd_line() const
-{
-    return cmdline;
 }
 
 inline int Position::pieces_count_on_board(Color c)

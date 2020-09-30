@@ -306,7 +306,7 @@ string UCI::move(Move m)
 /// UCI::to_move() converts a string representing a move in coordinate notation
 /// (g1f3, a7a8q) to the corresponding legal Move, if any.
 
-Move UCI::to_move(const Position &pos, string &str)
+Move UCI::to_move(/* const */  Position &pos, string &str)
 {
     if (str.length() == 5) // Junior could send promotion piece in uppercase
         str[4] = char(tolower(str[4]));
