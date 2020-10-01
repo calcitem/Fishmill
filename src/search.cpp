@@ -595,6 +595,8 @@ namespace
 template <NodeType NT>
 Value search(Position &pos, Stack *ss, Value alpha, Value beta, Depth depth, bool cutNode)
 {
+    // consider call return MTDF(rootPos, ss, value, i, adjustedDepth, bestMove);    // TODO;
+
     constexpr bool PvNode = NT == PV;
     const bool rootNode = PvNode && ss->ply == 0;
 
