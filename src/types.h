@@ -290,7 +290,7 @@ enum Piece : uint8_t
     W_STONE_11 = 0x2B,
     W_STONE_12 = 0x2C,
 
-    PIECE_NB = 24
+    PIECE_NB = 64,  // Fix overflow
 };
 
 constexpr Value PieceValue = StoneValue;
@@ -585,7 +585,7 @@ inline Color color_of(Piece pc)
 
 constexpr bool is_ok(Square s)
 {
-    return s >= SQ_A1 && s <= SQ_C8;
+    return s == SQ_NONE || (s >= SQ_A1 && s <= SQ_C8);  // TODO: SQ_NONE?
 }
 
 constexpr File file_of(Square s)
