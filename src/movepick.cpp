@@ -57,10 +57,9 @@ void partial_insertion_sort(ExtMove *begin, ExtMove *end, int limit)
 /// ordering is at the current node.
 
 /// MovePicker constructor for the main search
-MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, const ButterflyHistory *mh, const LowPlyHistory *lp,
-                       const CapturePieceToHistory *cph, const PieceToHistory **ch, Move cm, Move *killers, int pl)
-    : pos(p), mainHistory(mh), lowPlyHistory(lp), captureHistory(cph), continuationHistory(ch),
-    ttMove(ttm), refutations{ {killers[0], 0}, {killers[1], 0}, {cm, 0} }, depth(d), ply(pl) {
+MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, Move *killers, int pl)
+    : pos(p),
+    ttMove(ttm), refutations{ {killers[0], 0}, {killers[1], 0}}, depth(d), ply(pl) {
 
     assert(d > 0);
 
@@ -69,9 +68,8 @@ MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, const Butterf
 }
 
 /// MovePicker constructor for quiescence search
-MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, const ButterflyHistory *mh,
-                       const CapturePieceToHistory *cph, const PieceToHistory **ch, Square rs)
-    : pos(p), mainHistory(mh), captureHistory(cph), continuationHistory(ch), ttMove(ttm), recaptureSquare(rs), depth(d)
+MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, Square rs)
+    : pos(p), ttMove(ttm), recaptureSquare(rs), depth(d)
 {
     assert(d <= 0);
 
@@ -82,8 +80,8 @@ MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, const Butterf
 
 /// MovePicker constructor for ProbCut: we generate captures with SEE greater
 /// than or equal to the given threshold.
-MovePicker::MovePicker(/* const */ Position &p, Move ttm, Value th, const CapturePieceToHistory *cph)
-    : pos(p), captureHistory(cph), ttMove(ttm), threshold(th)
+MovePicker::MovePicker(/* const */ Position &p, Move ttm, Value th)
+    : pos(p), ttMove(ttm), threshold(th)
 {
     stage = PROBCUT_TT + !(ttm && pos.capture(ttm)
                            && pos.pseudo_legal(ttm)

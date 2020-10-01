@@ -148,16 +148,10 @@ class MovePicker
 public:
     MovePicker(const MovePicker &) = delete;
     MovePicker &operator=(const MovePicker &) = delete;
-    MovePicker(/* const */ Position &, Move, Value, const CapturePieceToHistory *);
-    MovePicker(/* const */ Position &, Move, Depth, const ButterflyHistory *,
-               const CapturePieceToHistory *,
-               const PieceToHistory **,
+    MovePicker(/* const */ Position &, Move, Value);
+    MovePicker(/* const */ Position &, Move, Depth,
                Square);
-    MovePicker(/* const */ Position &, Move, Depth, const ButterflyHistory *,
-               const LowPlyHistory *,
-               const CapturePieceToHistory *,
-               const PieceToHistory **,
-               Move,
+    MovePicker(/* const */ Position &, Move, Depth,
                Move *,
                int);
     Move next_move(bool skipQuiets = false);
