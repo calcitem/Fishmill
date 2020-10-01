@@ -370,13 +370,17 @@ inline int Position::rule50_count() const
 
 inline bool Position::capture(Move m) const
 {
+#if 0
     assert(is_ok(m));
     // Castling is encoded as "king captures rook"
     return (!empty(to_sq(m)));
+#endif
+
+    return m < 0;
 }
 
 inline Piece Position::captured_piece() const
-{
+{   // TODO
     return st->capturedPiece;
 }
 
