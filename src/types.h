@@ -628,7 +628,10 @@ constexpr Square to_sq(Move m)
 
 constexpr int from_to(Move m)
 {
-    return m & 0xFFF;  // TODO
+#if 0
+    return m & 0xFFF;
+#endif
+    return m & 0xFFFF;   // TODO
 }
 
 constexpr MoveType type_of(Move m)
