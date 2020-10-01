@@ -42,7 +42,7 @@ namespace
 {
 
 // FEN string of the initial position, normal mill game
-const char *StartFEN = "********/********/******** b p 0 1"; // Chess: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const char *StartFEN = "********/********/******** b p p 0 12 0 12 0 0 1"; // Chess: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 
 // position() is called when engine receives the "position" UCI command.

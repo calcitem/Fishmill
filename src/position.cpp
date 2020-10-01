@@ -211,11 +211,15 @@ Position &Position::set(const string &fenStr, StateInfo *si, Thread *th)
 
        3) Phrase.
 
-       4) Halfmove clock. This is the number of halfmoves since the last
+       4) Action.
+
+       5) Black on board/Black in hand/White on board/White in hand/need to remove
+
+       6) Halfmove clock. This is the number of halfmoves since the last
           capture. This is used to determine if a draw can be claimed under the
           fifty-move rule.
 
-       5) Fullmove number. The number of the full move. It starts at 1, and is
+       7) Fullmove number. The number of the full move. It starts at 1, and is
           incremented after Black's move.
     */
 
@@ -254,11 +258,9 @@ Position &Position::set(const string &fenStr, StateInfo *si, Thread *th)
         break;
     case 'p':
         phase = PHASE_PLACING;
-        action = ACTION_PLACE;
         break;
     case 'm':
         phase = PHASE_MOVING;
-        action = ACTION_SELECT;
         break;
     case 'o':
         phase = PHASE_GAMEOVER;
@@ -267,9 +269,32 @@ Position &Position::set(const string &fenStr, StateInfo *si, Thread *th)
         phase = PHASE_NONE;
     }
 
-    // TODO: ACTION_REMOVE
+    // 4. Action
+    ss >> token;
+    ss >> token;
 
-    // 4-5. Halfmove clock and fullmove number
+    switch (token) {
+    case 'p':
+        action = ACTION_PLACE;
+        break;
+    case 's':
+        action = ACTION_SELECT;
+        break;
+    case 'r':
+        action = ACTION_REMOVE;
+        break;
+    default:
+        action = ACTION_NONE;
+    }
+    
+    // 5. Black on board / Black in hand / White on board / White in hand / need to remove
+    ss >> std::skipws
+        >> pieceCountOnBoard[BLACK] >> pieceCountInHand[BLACK]
+        >> pieceCountOnBoard[WHITE] >> pieceCountInHand[WHITE]
+        >> pieceCountNeedRemove;
+
+
+    // 6-7. Halfmove clock and fullmove number
     ss >> std::skipws >> st->rule50 >> gamePly;
 
     // Convert from fullmove starting from 1 to gamePly starting from 0,
@@ -382,6 +407,28 @@ const string Position::fen() const
     }
 
     ss << " ";
+
+    // Action
+    switch (action) {
+    case ACTION_PLACE:
+        ss << "p";
+        break;
+    case ACTION_SELECT:
+        ss << "s";
+        break;
+    case ACTION_REMOVE:
+        ss << "r";
+        break;
+    default:
+        ss << "?";
+        break;
+    }
+
+    ss << " ";
+
+    ss << pieceCountOnBoard[BLACK] << " " << pieceCountInHand[BLACK] << " "
+        << pieceCountOnBoard[WHITE] << " " << pieceCountInHand[WHITE] << " "
+        << pieceCountNeedRemove << " ";
 
     ss << st->rule50 << " " << 1 + (gamePly - (sideToMove == BLACK)) / 2;
 
