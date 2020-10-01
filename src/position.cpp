@@ -246,6 +246,7 @@ Position &Position::set(const string &fenStr, StateInfo *si, Thread *th)
 
     // 3. Phrase
     ss >> token;
+    ss >> token;
 
     switch (token) {
     case 'r':
@@ -253,9 +254,11 @@ Position &Position::set(const string &fenStr, StateInfo *si, Thread *th)
         break;
     case 'p':
         phase = PHASE_PLACING;
+        action = ACTION_PLACE;
         break;
     case 'm':
         phase = PHASE_MOVING;
+        action = ACTION_SELECT;
         break;
     case 'o':
         phase = PHASE_GAMEOVER;
@@ -263,6 +266,8 @@ Position &Position::set(const string &fenStr, StateInfo *si, Thread *th)
     default:
         phase = PHASE_NONE;
     }
+
+    // TODO: ACTION_REMOVE
 
     // 4-5. Halfmove clock and fullmove number
     ss >> std::skipws >> st->rule50 >> gamePly;
