@@ -252,7 +252,7 @@ void MainThread::search()
     if (rootMoves.empty()) {
         rootMoves.emplace_back(MOVE_NONE);
         sync_cout << "info depth 0 score "
-            << UCI::value(false /* TODO */ ? -VALUE_MATE : VALUE_DRAW)
+            << UCI::value(rootPos.get_phase() == PHASE_GAMEOVER ? -VALUE_MATE : VALUE_DRAW) // TODO
             << sync_endl;
     } else {
         for (Thread *th : Threads) {
