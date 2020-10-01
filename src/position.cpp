@@ -41,6 +41,7 @@ using std::string;
 
 namespace Zobrist
 {
+const int KEY_MISC_BIT = 2;
 Key psq[PIECE_TYPE_NB][SQUARE_NB];
 Key side;
 }
@@ -159,7 +160,9 @@ void Position::init()
 
     for (PieceType pt : PieceTypes)
         for (Square s = SQ_0; s < SQUARE_NB; ++s)
-            Zobrist::psq[pt][s] = rng.rand<Key>();
+            Zobrist::psq[pt][s] = rng.rand<Key>() << Zobrist::KEY_MISC_BIT >> Zobrist::KEY_MISC_BIT;
+
+    Zobrist::side = rng.rand<Key>() << Zobrist::KEY_MISC_BIT >> Zobrist::KEY_MISC_BIT;
 
     // Prepare the cuckoo tables
     std::memset(cuckoo, 0, sizeof(cuckoo));
@@ -428,7 +431,6 @@ void Position::do_move(Move m, StateInfo &newSt)
     assert(&newSt != st);
 
     thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
-    Key k = st->key ^ Zobrist::side;
 
     // Copy some fields of the old state to our new StateInfo object except the
     // ones which are going to be recalculated from scratch anyway and then switch
@@ -437,45 +439,37 @@ void Position::do_move(Move m, StateInfo &newSt)
     newSt.previous = st;
     st = &newSt;
 
+    bool ret = false;
+
+    MoveType mt = type_of(m);
+
+    switch (mt) {
+    case MOVETYPE_REMOVE:
+        // Reset rule 50 counter
+        st->rule50 = 0;
+        ret = remove_piece(to_sq(m));
+        break;
+    case MOVETYPE_MOVE:
+        ret = move_piece(from_sq(m), to_sq(m));
+        break;
+    case MOVETYPE_PLACE:
+        ret = put_piece(to_sq(m));
+        break;
+    default:
+        break;
+    }
+
+    if (!ret) {
+        return;
+    }
+
     // Increment ply counters. In particular, rule50 will be reset to zero later on
-    // in case of a capture or a pawn move.
+    // in case of a capture.
     ++gamePly;
     ++st->rule50;
     ++st->pliesFromNull;
-
-    Color us = sideToMove;
-    Color them = ~us;
-    Square from = from_sq(m);
-    Square to = to_sq(m);
-    Piece pc = piece_on(from);
-    Piece captured = piece_on(to);
-
-    assert(color_of(pc) == us);
-    assert(captured == NO_PIECE || color_of(captured) == them);
-
-    if (captured) {
-        Square capsq = to;
-
-        // Update board and piece lists
-        remove_piece(capsq);
-
-        // Update material hash key and prefetch access to materialTable
-        k ^= Zobrist::psq[captured][capsq];
-
-        // Reset rule 50 counter
-        st->rule50 = 0;
-    }
-
-    // Update hash key
-    k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
-
-    // Set capture piece
-    st->capturedPiece = captured;
-
-    // Update the key with the final value
-    st->key = k;
-
-    sideToMove = ~sideToMove;
+    
+    move = m;
 
     // Calculate the repetition info. It is the ply distance from the previous
     // occurrence of the same position, negative in the 3-fold case, or zero
@@ -504,6 +498,7 @@ void Position::undo_move(Move m)
 {
     assert(is_ok(m));
 
+#if 0
     sideToMove = ~sideToMove;
 
     Color us = sideToMove;
@@ -522,6 +517,39 @@ void Position::undo_move(Move m)
             put_piece(st->capturedPiece, capsq); // Restore the captured piece
         }
     }
+#endif
+
+    bool ret = false;
+
+    // TODO Start
+    MoveType mt = type_of(m);
+
+    switch (mt) {
+    case MOVETYPE_REMOVE:
+        ret = put_piece(to_sq((Move)-m));
+        break;
+    case MOVETYPE_MOVE:
+        if (select_piece(to_sq(m))) {
+            ret = put_piece(from_sq(m));
+        }
+        break;
+    case MOVETYPE_PLACE:
+        ret = remove_piece(static_cast<Square>(m));
+        break;
+    default:
+        break;
+    }
+
+    if (!ret) {
+        return;
+    }
+
+    // TODO: Adjust
+    //int pieceCountInHand[COLOR_NB]{ 0 };
+    //int pieceCountOnBoard[COLOR_NB]{ 0 };
+    //int pieceCountNeedRemove{ 0 };
+
+    // TODO End
 
     // Finally point our state pointer back to the previous state
     st = st->previous;
@@ -536,6 +564,7 @@ void Position::undo_move(Move m)
 
 void Position::do_null_move(StateInfo &newSt)
 {
+    // TODO
     assert(&newSt != st);
 
     std::memcpy(&newSt, st, sizeof(StateInfo));
@@ -557,26 +586,41 @@ void Position::do_null_move(StateInfo &newSt)
 
 void Position::undo_null_move()
 {
+    // TODO
     st = st->previous;
     sideToMove = ~sideToMove;
 }
 
 
 /// Position::key_after() computes the new hash key after the given move. Needed
-/// for speculative prefetch. It doesn't recognize special moves like ...
+/// for speculative prefetch. It doesn't recognize special moves like  (need remove)
 
 Key Position::key_after(Move m) const
 {
-    Square from = from_sq(m);
-    Square to = to_sq(m);
-    Piece pc = piece_on(from);
-    Piece captured = piece_on(to);
-    Key k = st->key ^ Zobrist::side;
+    Key k = st->key;
+    Square s = static_cast<Square>(to_sq(m));;
+    MoveType mt = type_of(m);
 
-    if (captured)
-        k ^= Zobrist::psq[captured][to];
+    if (mt == MOVETYPE_REMOVE) {
+        k ^= Zobrist::psq[~side_to_move()][s];
 
-    return k ^ Zobrist::psq[pc][to] ^ Zobrist::psq[pc][from];
+        if (rule.hasBannedLocations && phase == PHASE_PLACING) {
+            k ^= Zobrist::psq[BAN][s];
+        }
+
+        goto out;
+    }
+
+    k ^= Zobrist::psq[side_to_move()][s];
+
+    if (mt == MOVETYPE_MOVE) {
+        k ^= Zobrist::psq[side_to_move()][from_sq(m)];
+    }
+
+out:
+    k ^= Zobrist::side;
+
+    return k;
 }
 
 
@@ -806,14 +850,14 @@ int Position::set_position(const struct Rule *newRule)
     rule = *newRule;
 
     gamePly = 0;
-    //st->rule50 = 0;   // TODO
+    //st->rule50 = 0;   // TODO: Crash
 
     phase = PHASE_READY;
     set_side_to_move(BLACK);
     action = ACTION_PLACE;
 
     memset(board, 0, sizeof(board));
-    //st->key = 0;  // TODO
+    //st->key = 0;  // TODO: Crash
     memset(byTypeBB, 0, sizeof(byTypeBB));
 
     if (pieces_on_board_count() == -1) {
@@ -902,6 +946,223 @@ bool Position::start()
     }
 }
 
+bool Position::put_piece(Square s)
+{
+    Piece piece = NO_PIECE;
+    int us = sideToMove;
+
+    Bitboard fromTo;
+
+    if (phase == PHASE_GAMEOVER ||
+        action != ACTION_PLACE ||
+        !onBoard[s] || board[s]) {
+        return false;
+    }
+
+    if (phase == PHASE_READY) {
+        start();
+    }
+
+    if (phase == PHASE_PLACING) {
+        piece = (Piece)((0x01 | make_piece(sideToMove)) + rule.nTotalPiecesEachSide - pieceCountInHand[us]);
+        pieceCountInHand[us]--;
+        pieceCountOnBoard[us]++;
+
+        board[s]= piece;
+
+        update_key(s);
+
+        byTypeBB[ALL_PIECES] |= s;
+        byTypeBB[us] |= s;
+
+        currentSquare = s;
+
+        int n = add_mills(currentSquare);
+
+        if (n == 0) {
+            assert(pieceCountInHand[BLACK] >= 0 && pieceCountInHand[WHITE] >= 0);     
+
+            if (pieceCountInHand[BLACK] == 0 && pieceCountInHand[WHITE] == 0) {
+                if (check_gameover_condition()) {
+                    return true;
+                }
+
+                phase = PHASE_MOVING;
+                action = ACTION_SELECT;
+
+                if (rule.hasBannedLocations) {
+                    remove_ban_stones();
+                }
+
+                if (!rule.isDefenderMoveFirst) {
+                    change_side_to_move();
+                }
+
+                if (check_gameover_condition()) {
+                    return true;
+                }
+            } else {
+                change_side_to_move();
+            }
+        } else {
+            pieceCountNeedRemove = rule.allowRemoveMultiPiecesWhenCloseMultiMill ? n : 1;
+            update_key_misc();
+            action = ACTION_REMOVE;
+        } 
+
+    } else if (phase == PHASE_MOVING) {
+
+        if (check_gameover_condition()) {
+            return true;
+        }
+
+        // if illegal
+        if (pieceCountOnBoard[sideToMove] > rule.nPiecesAtLeast ||
+            !rule.allowFlyWhenRemainThreePieces) {
+            int md;
+
+            for (md = 0; md < MD_NB; md++) {
+                if (s == MoveList<LEGAL>::moveTable[currentSquare][md])
+                    break;
+            }
+
+            // not in moveTable
+            if (md == MD_NB) {
+                return false;
+            }
+        }
+
+        // st->rule50++; // TODO: Need?
+
+        fromTo = square_bb(currentSquare) | square_bb(s);
+        byTypeBB[ALL_PIECES] ^= fromTo;
+        byTypeBB[us] ^= fromTo;
+
+        board[s] = board[currentSquare];
+
+        update_key(s);
+        revert_key(currentSquare);
+
+        board[currentSquare] = NO_PIECE;
+
+        currentSquare = s;
+        int n = add_mills(currentSquare);
+
+        // midgame
+        if (n == 0) {
+            action = ACTION_SELECT;
+            change_side_to_move();
+
+            if (check_gameover_condition()) {
+                return true;
+            }
+        } else {
+            pieceCountNeedRemove = rule.allowRemoveMultiPiecesWhenCloseMultiMill ? n : 1;
+            update_key_misc();
+            action = ACTION_REMOVE;
+        }
+    } else {
+        assert(0);
+    }
+
+    return true;
+}
+
+bool Position::remove_piece(Square s)
+{
+#if 0
+    // WARNING: This is not a reversible operation. If we remove a piece in
+    // do_move() and then replace it in undo_move() we will put it at the end of
+    // the list and not in its original place, it means index[] and pieceList[]
+    // are not invariant to a do_move() + undo_move() sequence.
+    Piece pc = board[s];
+    byTypeBB[ALL_PIECES] ^= s;
+    byTypeBB[type_of(pc)] ^= s;
+    byColorBB[color_of(pc)] ^= s;
+    /* board[s] = NO_PIECE;  Not needed, overwritten by the capturing one */
+    Square lastSquare = pieceList[pc][--pieceCount[pc]];
+    index[lastSquare] = index[s];
+    pieceList[pc][index[lastSquare]] = lastSquare;
+    pieceList[pc][pieceCount[pc]] = SQ_NONE;
+    pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
+#endif
+
+    if (phase & PHASE_NOTPLAYING)
+        return false;
+
+    if (action != ACTION_REMOVE)
+        return false;
+
+    if (pieceCountNeedRemove <= 0)
+        return false;
+
+    // if piece is not their
+    if (!(make_piece(~side_to_move()) & board[s]))
+        return false;
+
+    if (!rule.allowRemovePieceInMill &&
+        in_how_many_mills(s, NOBODY) &&
+        !is_all_in_mills(~sideToMove)) {
+        return false;
+    }
+
+    revert_key(s);
+
+    if (rule.hasBannedLocations && phase == PHASE_PLACING) {
+        board[s]= BAN_STONE;
+        update_key(s);
+        byTypeBB[them] ^= s;
+        byTypeBB[BAN] |= s;
+    } else { // Remove
+        board[s]= NO_PIECE;
+        byTypeBB[ALL_PIECES] ^= s;
+        byTypeBB[them] ^= s;
+    }
+
+    //st->rule50 = 0;     // TODO?
+
+    pieceCountOnBoard[them]--;
+
+    if (pieceCountOnBoard[them] + pieceCountInHand[them] < rule.nPiecesAtLeast) {
+        set_gameover(sideToMove, LOSE_REASON_LESS_THAN_THREE);
+        return true;
+    }
+
+    currentSquare = SQ_0;
+
+    pieceCountNeedRemove--;
+    update_key_misc();
+
+    if (pieceCountNeedRemove > 0) {
+        return true;
+    }
+
+    if (phase == PHASE_PLACING) {
+        if (pieceCountInHand[BLACK] == 0 && pieceCountInHand[WHITE] == 0) {
+            phase = PHASE_MOVING;
+            action = ACTION_SELECT;
+
+            if (rule.hasBannedLocations) {
+                remove_ban_stones();
+            }
+
+            if (rule.isDefenderMoveFirst) {
+                goto check;
+            }
+        } else {
+            action = ACTION_PLACE;
+        }
+    } else {
+        action = ACTION_SELECT;
+    }
+
+    change_side_to_move();
+
+check:
+    check_gameover_condition();    
+
+    return true;
+}
 
 bool Position::select_piece(Square s)
 {
@@ -1107,13 +1368,14 @@ inline void Position::set_side_to_move(Color c)
 inline void Position::change_side_to_move()
 {
     set_side_to_move(~sideToMove);
+    st->key ^= Zobrist::side;
 }
 
 inline Key Position::update_key(Square s)
 {
     // PieceType is board[s]
 
-    // 0b00 - no piece£¬0b01 = 1 black£¬0b10 = 2 white£¬0b11 = 3 ban
+    // 0b00 - no piece, 0b01 = 1 black, 0b10 = 2 white, 0b11 = 3 ban
     int pieceType = color_on(s);
     // TODO: this is std, but current code can work
     //Location loc = board[s];
@@ -1131,52 +1393,11 @@ inline Key Position::revert_key(Square s)
 
 Key Position::update_key_misc()
 {
-    const int KEY_MISC_BIT = 8;
+    st->key = st->key << Zobrist::KEY_MISC_BIT >> Zobrist::KEY_MISC_BIT;
 
-    st->key = st->key << KEY_MISC_BIT >> KEY_MISC_BIT;
-    Key hi = 0;
-
-    if (sideToMove == WHITE) {
-        hi |= 1U;
-    }
-
-    if (action == ACTION_REMOVE) {
-        hi |= 1U << 1;
-    }
-
-    hi |= static_cast<Key>(pieceCountNeedRemove) << 2;
-    hi |= static_cast<Key>(pieceCountInHand[BLACK]) << 4;     // TODO: may use phase is also OK?
-
-    st->key = st->key | (hi << (CHAR_BIT * sizeof(Key) - KEY_MISC_BIT));
+    st->key |= static_cast<Key>(pieceCountNeedRemove) << (CHAR_BIT * sizeof(Key) - Zobrist::KEY_MISC_BIT);
 
     return st->key;
-}
-
-Key Position::next_primary_key(Move m)
-{
-    Key npKey = st->key /* << 8 >> 8 */;
-    Square s = static_cast<Square>(to_sq(m));;
-    MoveType mt = type_of(m);
-
-    if (mt == MOVETYPE_REMOVE) {
-        int pieceType = ~sideToMove;
-        npKey ^= Zobrist::psq[pieceType][s];
-
-        if (rule.hasBannedLocations && phase == PHASE_PLACING) {
-            npKey ^= Zobrist::psq[BAN][s];
-        }
-
-        return npKey;
-    }
-
-    int pieceType = sideToMove;
-    npKey ^= Zobrist::psq[pieceType][s];
-
-    if (mt == MOVETYPE_MOVE) {
-        npKey ^= Zobrist::psq[pieceType][from_sq(m)];
-    }
-
-    return npKey;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

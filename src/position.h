@@ -114,7 +114,6 @@ public:
     Key revert_key(Square s);
     Key update_key(Square s);
     Key update_key_misc();
-    Key next_primary_key(Move m);
 
     // Other properties of the position
     Color side_to_move() const;
@@ -181,6 +180,9 @@ public:
     static bool is_star_square(Square s);
 
     bool select_piece(Square s);
+    bool put_piece(Square s);
+    bool undo_put_piece(Square s);
+    bool undo_remove_piece(Square s);
 
 private:
     // Initialization helpers (used while setting up a position)
@@ -188,8 +190,8 @@ private:
 
     // Other helpers
     void put_piece(Piece pc, Square s);
-    void remove_piece(Square s);
-    void move_piece(Square from, Square to);
+    bool remove_piece(Square s);
+    bool move_piece(Square from, Square to);
 
     // Data members
     Piece board[SQUARE_NB];
@@ -394,26 +396,9 @@ inline void Position::put_piece(Piece pc, Square s)
     pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
 }
 
-inline void Position::remove_piece(Square s)
+inline bool Position::move_piece(Square from, Square to)
 {
-    // WARNING: This is not a reversible operation. If we remove a piece in
-    // do_move() and then replace it in undo_move() we will put it at the end of
-    // the list and not in its original place, it means index[] and pieceList[]
-    // are not invariant to a do_move() + undo_move() sequence.
-    Piece pc = board[s];
-    byTypeBB[ALL_PIECES] ^= s;
-    byTypeBB[type_of(pc)] ^= s;
-    byColorBB[color_of(pc)] ^= s;
-    /* board[s] = NO_PIECE;  Not needed, overwritten by the capturing one */
-    Square lastSquare = pieceList[pc][--pieceCount[pc]];
-    index[lastSquare] = index[s];
-    pieceList[pc][index[lastSquare]] = lastSquare;
-    pieceList[pc][pieceCount[pc]] = SQ_NONE;
-    pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
-}
-
-inline void Position::move_piece(Square from, Square to)
-{
+#if 0
     // index[from] is not updated and becomes stale. This works as long as index[]
     // is accessed just by known occupied squares.
     Piece pc = board[from];
@@ -425,7 +410,15 @@ inline void Position::move_piece(Square from, Square to)
     board[to] = pc;
     index[to] = index[from];
     pieceList[pc][index[to]] = to;
+#endif
+
+    if (select_piece(from)) {
+        return put_piece(to);
+    }
+
+    return false;
 }
+
 
 /// Mill Game
 
