@@ -23,8 +23,8 @@
 
 #include "movepick.h"
 
-namespace
-{
+//namespace
+//{
 
 enum Stages
 {
@@ -47,7 +47,7 @@ void partial_insertion_sort(ExtMove *begin, ExtMove *end, int limit)
         }
 }
 
-} // namespace
+//} // namespace
 
 
 /// Constructors of the MovePicker class. As arguments we pass information
@@ -65,6 +65,10 @@ MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, Move *killers
 
     stage = (MAIN_TT)+
         !(ttm && pos.pseudo_legal(ttm));
+
+#ifdef HOSTORY_HEURISTIC
+    clearHistoryScore();
+#endif
 }
 
 /// MovePicker constructor for quiescence search
@@ -76,6 +80,10 @@ MovePicker::MovePicker(/* const */ Position &p, Move ttm, Depth d, Square rs)
     stage = (QSEARCH_TT)+
         !(ttm && (depth > DEPTH_QS_RECAPTURES || to_sq(ttm) == recaptureSquare)
           && pos.pseudo_legal(ttm));
+
+#ifdef HOSTORY_HEURISTIC
+    clearHistoryScore();
+#endif
 }
 
 /// MovePicker constructor for ProbCut: we generate captures with SEE greater
@@ -86,11 +94,14 @@ MovePicker::MovePicker(/* const */ Position &p, Move ttm, Value th)
     stage = PROBCUT_TT + !(ttm && pos.capture(ttm)
                            && pos.pseudo_legal(ttm)
                            && pos.see_ge(ttm, threshold));
+
+#ifdef HOSTORY_HEURISTIC
+    clearHistoryScore();
+#endif
 }
 
 /// MovePicker::score() assigns a numerical value to each move in a list, used
-/// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
-/// captures with a good history. Quiets moves are ordered using the histories.
+/// for sorting.
 template<GenType Type>
 void MovePicker::score()
 {
@@ -107,7 +118,7 @@ void MovePicker::score()
         int nTheirMills = 0;
 
 #ifndef SORT_MOVE_WITHOUT_HUMAN_KNOWLEDGES
-        // TODO: rule.allowRemoveMultiPiecesWhenCloseMultiMill adapt other rules
+        // TODO: rule->allowRemoveMultiPiecesWhenCloseMultiMill adapt other rules
         if (type_of(m) != MOVETYPE_REMOVE) {
             // all phrase, check if place sq can close mill
             if (nOurMills > 0) {
@@ -132,7 +143,7 @@ void MovePicker::score()
 
                     if (sq % 2 == 0 && nTheirPieces == 3) {
                         cur->value += RATING_BLOCK_ONE_MILL * nTheirMills;
-                    } else if (sq % 2 == 1 && nTheirPieces == 2 && rule.nTotalPiecesEachSide == 12) {
+                    } else if (sq % 2 == 1 && nTheirPieces == 2 && rule->nTotalPiecesEachSide == 12) {
                         cur->value += RATING_BLOCK_ONE_MILL * nTheirMills;
                     }
                 }
@@ -142,7 +153,7 @@ void MovePicker::score()
             //cur->value += nBanned;  // placing phrase, place nearby ban point
 
             // for 12 men, white 's 2nd move place star point is as important as close mill (TODO)   
-            if (rule.nTotalPiecesEachSide == 12 &&
+            if (rule->nTotalPiecesEachSide == 12 &&
                 pos.count<ON_BOARD>(WHITE) < 2 &&    // patch: only when white's 2nd move
                 Position::is_star_square(static_cast<Square>(m))) {
                 cur->value += RATING_STAR_SQUARE;
@@ -155,7 +166,7 @@ void MovePicker::score()
 
             pos.surrounded_pieces_count(sq, nOurPieces, nTheirPieces, nBanned, nEmpty);
 
-               if (nOurMills > 0) {
+            if (nOurMills > 0) {
                 // remove point is in our mill
                 //cur->value += RATING_REMOVE_ONE_MILL * nOurMills;
 
@@ -187,7 +198,7 @@ void MovePicker::score()
             cur->value += nEmpty;
         }
 #endif // !SORT_MOVE_WITHOUT_HUMAN_KNOWLEDGES
-        }
+    }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -220,3 +231,58 @@ Move MovePicker::next_move(bool skipQuiets)
 
     return *moves;
 }
+
+#ifdef HOSTORY_HEURISTIC
+Score MovePicker::getHistoryScore(Move move)
+{
+    Score ret = 0;
+
+    if (move < 0) {
+#ifndef HOSTORY_HEURISTIC_ACTION_MOVE_ONLY
+        ret = placeHistory[-move];
+#endif
+    } else if (move & 0x7f00) {
+        ret = moveHistory[move];
+    } else {
+#ifndef HOSTORY_HEURISTIC_ACTION_MOVE_ONLY
+        ret = placeHistory[move];
+#endif
+    }
+
+    return ret;
+}
+
+void MovePicker::setHistoryScore(Move move, Depth depth)
+{
+    if (move == MOVE_NONE) {
+        return;
+    }
+
+#ifdef HOSTORY_HEURISTIC_SCORE_HIGH_WHEN_DEEPER
+    Score score = 1 << (32 - depth);
+#else
+    Score score = 1 << depth;
+#endif
+
+    if (move < 0) {
+#ifndef HOSTORY_HEURISTIC_ACTION_MOVE_ONLY
+        placeHistory[-move] += score;
+#endif
+    } else if (move & 0x7f00) {
+        moveHistory[move] += score;
+    } else {
+#ifndef HOSTORY_HEURISTIC_ACTION_MOVE_ONLY
+        moveHistory[move] += score;
+#endif
+    }
+}
+
+void MovePicker::clearHistoryScore()
+{
+#ifndef HOSTORY_HEURISTIC_ACTION_MOVE_ONLY
+    memset(placeHistory, 0, sizeof(placeHistory));
+    memset(removeHistory, 0, sizeof(removeHistory));
+#endif
+    memset(moveHistory, 0, sizeof(moveHistory));
+}
+#endif // HOSTORY_HEURISTIC

@@ -33,7 +33,6 @@
 #include "thread.h"
 #include "tt.h"
 #include "uci.h"
-#include "syzygy/tbprobe.h"
 
 #include "option.h"
 
@@ -177,12 +176,14 @@ Position::Position()
 
     construct_key();
 
-    set_position(&RULES[DEFAULT_RULE_NUMBER]);
+    if (rule == nullptr) {
+        set_position(&RULES[DEFAULT_RULE_NUMBER]);
+    }
 
     score[BLACK] = score[WHITE] = score_draw = nPlayed = 0;
 
 #ifndef DISABLE_PREFETCH
-    //prefetch_range(millTable, sizeof(millTable)); // TODO
+    prefetch_range(millTable, sizeof(millTable));
 #endif
 }
 
@@ -241,8 +242,8 @@ Position &Position::set(const string &fenStr, StateInfo *si, Thread *th)
             // put_piece(Piece(idx), sq);   // TODO
         }
 
-            ++sq;
-        }
+        ++sq;
+    }
 
     // 2. Active color
     ss >> token;
@@ -656,7 +657,7 @@ Key Position::key_after(Move m) const
     if (mt == MOVETYPE_REMOVE) {
         k ^= Zobrist::psq[~side_to_move()][s];
 
-        if (rule.hasBannedLocations && phase == PHASE_PLACING) {
+        if (rule->hasBannedLocations && phase == PHASE_PLACING) {
             k ^= Zobrist::psq[BAN][s];
         }
 
@@ -881,8 +882,8 @@ int Position::pieces_on_board_count()
         }
     }
 
-    if (pieceCountOnBoard[BLACK] > rule.nTotalPiecesEachSide ||
-        pieceCountOnBoard[WHITE] > rule.nTotalPiecesEachSide) {
+    if (pieceCountOnBoard[BLACK] > rule->nTotalPiecesEachSide ||
+        pieceCountOnBoard[WHITE] > rule->nTotalPiecesEachSide) {
         return -1;
     }
 
@@ -891,15 +892,15 @@ int Position::pieces_on_board_count()
 
 int Position::pieces_in_hand_count()
 {
-    pieceCountInHand[BLACK] = rule.nTotalPiecesEachSide - pieceCountOnBoard[BLACK];
-    pieceCountInHand[WHITE] = rule.nTotalPiecesEachSide - pieceCountOnBoard[WHITE];
+    pieceCountInHand[BLACK] = rule->nTotalPiecesEachSide - pieceCountOnBoard[BLACK];
+    pieceCountInHand[WHITE] = rule->nTotalPiecesEachSide - pieceCountOnBoard[WHITE];
 
     return pieceCountInHand[BLACK] + pieceCountInHand[WHITE];
 }
 
 int Position::set_position(const struct Rule *newRule)
 {
-    rule = *newRule;
+    rule = newRule;
 
     gamePly = 0;
     //st->rule50 = 0;   // TODO: Crash
@@ -927,7 +928,7 @@ int Position::set_position(const struct Rule *newRule)
 
     int r;
     for (r = 0; r < N_RULES; r++) {
-        if (strcmp(rule.name, RULES[r].name) == 0)
+        if (strcmp(rule->name, RULES[r].name) == 0)
             return r;
     }
 
@@ -956,7 +957,7 @@ bool Position::reset()
     memset(byTypeBB, 0, sizeof(byTypeBB));
 
     pieceCountOnBoard[BLACK] = pieceCountOnBoard[WHITE] = 0;
-    pieceCountInHand[BLACK] = pieceCountInHand[WHITE] = rule.nTotalPiecesEachSide;
+    pieceCountInHand[BLACK] = pieceCountInHand[WHITE] = rule->nTotalPiecesEachSide;
     pieceCountNeedRemove = 0;
     millListSize = 0;
     currentSquare = SQ_0;
@@ -971,7 +972,7 @@ bool Position::reset()
     int i;
 
     for (i = 0; i < N_RULES; i++) {
-        if (strcmp(rule.name, RULES[i].name) == 0)
+        if (strcmp(rule->name, RULES[i].name) == 0)
             break;
     }
 
@@ -1016,7 +1017,7 @@ bool Position::put_piece(Square s)
     }
 
     if (phase == PHASE_PLACING) {
-        piece = (Piece)((0x01 | make_piece(sideToMove)) + rule.nTotalPiecesEachSide - pieceCountInHand[us]);
+        piece = (Piece)((0x01 | make_piece(sideToMove)) + rule->nTotalPiecesEachSide - pieceCountInHand[us]);
         pieceCountInHand[us]--;
         pieceCountOnBoard[us]++;
 
@@ -1042,11 +1043,11 @@ bool Position::put_piece(Square s)
                 phase = PHASE_MOVING;
                 action = ACTION_SELECT;
 
-                if (rule.hasBannedLocations) {
+                if (rule->hasBannedLocations) {
                     remove_ban_stones();
                 }
 
-                if (!rule.isDefenderMoveFirst) {
+                if (!rule->isDefenderMoveFirst) {
                     change_side_to_move();
                 }
 
@@ -1057,7 +1058,7 @@ bool Position::put_piece(Square s)
                 change_side_to_move();
             }
         } else {
-            pieceCountNeedRemove = rule.allowRemoveMultiPiecesWhenCloseMultiMill ? n : 1;
+            pieceCountNeedRemove = rule->allowRemoveMultiPiecesWhenCloseMultiMill ? n : 1;
             update_key_misc();
             action = ACTION_REMOVE;
         } 
@@ -1069,8 +1070,8 @@ bool Position::put_piece(Square s)
         }
 
         // if illegal
-        if (pieceCountOnBoard[sideToMove] > rule.nPiecesAtLeast ||
-            !rule.allowFlyWhenRemainThreePieces) {
+        if (pieceCountOnBoard[sideToMove] > rule->nPiecesAtLeast ||
+            !rule->allowFlyWhenRemainThreePieces) {
             int md;
 
             for (md = 0; md < MD_NB; md++) {
@@ -1109,7 +1110,7 @@ bool Position::put_piece(Square s)
                 return true;
             }
         } else {
-            pieceCountNeedRemove = rule.allowRemoveMultiPiecesWhenCloseMultiMill ? n : 1;
+            pieceCountNeedRemove = rule->allowRemoveMultiPiecesWhenCloseMultiMill ? n : 1;
             update_key_misc();
             action = ACTION_REMOVE;
         }
@@ -1152,7 +1153,7 @@ bool Position::remove_piece(Square s)
     if (!(make_piece(~side_to_move()) & board[s]))
         return false;
 
-    if (!rule.allowRemovePieceInMill &&
+    if (!rule->allowRemovePieceInMill &&
         in_how_many_mills(s, NOBODY) &&
         !is_all_in_mills(~sideToMove)) {
         return false;
@@ -1160,7 +1161,7 @@ bool Position::remove_piece(Square s)
 
     revert_key(s);
 
-    if (rule.hasBannedLocations && phase == PHASE_PLACING) {
+    if (rule->hasBannedLocations && phase == PHASE_PLACING) {
         board[s]= BAN_STONE;
         update_key(s);
         byTypeBB[them] ^= s;
@@ -1175,7 +1176,7 @@ bool Position::remove_piece(Square s)
 
     pieceCountOnBoard[them]--;
 
-    if (pieceCountOnBoard[them] + pieceCountInHand[them] < rule.nPiecesAtLeast) {
+    if (pieceCountOnBoard[them] + pieceCountInHand[them] < rule->nPiecesAtLeast) {
         set_gameover(sideToMove, LOSE_REASON_LESS_THAN_THREE);
         return true;
     }
@@ -1194,11 +1195,11 @@ bool Position::remove_piece(Square s)
             phase = PHASE_MOVING;
             action = ACTION_SELECT;
 
-            if (rule.hasBannedLocations) {
+            if (rule->hasBannedLocations) {
                 remove_ban_stones();
             }
 
-            if (rule.isDefenderMoveFirst) {
+            if (rule->isDefenderMoveFirst) {
                 goto check;
             }
         } else {
@@ -1361,8 +1362,8 @@ bool Position::check_gameover_condition()
         return true;
     }
 
-    if (rule.maxStepsLedToDraw > 0 &&
-        st->rule50 > rule.maxStepsLedToDraw) {
+    if (rule->maxStepsLedToDraw > 0 &&
+        st->rule50 > rule->maxStepsLedToDraw) {
         winner = DRAW;
         phase = PHASE_GAMEOVER;
         gameoverReason = DRAW_REASON_RULE_50;
@@ -1370,7 +1371,7 @@ bool Position::check_gameover_condition()
     }
 
     if (pieceCountOnBoard[BLACK] + pieceCountOnBoard[WHITE] >= RANK_NB * FILE_NB) {
-        if (rule.isBlackLosebutNotDrawWhenBoardFull) {
+        if (rule->isBlackLosebutNotDrawWhenBoardFull) {
             set_gameover(WHITE, LOSE_REASON_BOARD_IS_FULL);
         } else {
             set_gameover(DRAW, DRAW_REASON_BOARD_IS_FULL);
@@ -1380,7 +1381,7 @@ bool Position::check_gameover_condition()
     }
 
     if (phase == PHASE_MOVING && action == ACTION_SELECT && is_all_surrounded()) {
-        if (rule.isLoseButNotChangeSideWhenNoWay) {
+        if (rule->isLoseButNotChangeSideWhenNoWay) {
             set_gameover(~sideToMove, LOSE_REASON_NO_WAY);
             return true;
         } else {
@@ -1394,7 +1395,7 @@ bool Position::check_gameover_condition()
 
 void Position::remove_ban_stones()
 {
-    assert(rule.hasBannedLocations);
+    assert(rule->hasBannedLocations);
 
     Square s = SQ_0;
 
@@ -1599,7 +1600,7 @@ void Position::create_mill_table()
         /* 39 */ {{0, 0}, {0, 0}, {0, 0}}
     };
 
-    if (rule.hasObliqueLines) {
+    if (rule->hasObliqueLines) {
         memcpy(millTable, millTable_hasObliqueLines, sizeof(millTable));
     } else {
         memcpy(millTable, millTable_noObliqueLine, sizeof(millTable));
@@ -1730,12 +1731,12 @@ bool Position::is_all_in_mills(Color c)
 // Stat include ban
 int Position::surrounded_empty_squares_count(Square s, bool includeFobidden)
 {
-    //assert(rule.hasBannedLocations == includeFobidden);
+    //assert(rule->hasBannedLocations == includeFobidden);
 
     int count = 0;
 
-    if (pieceCountOnBoard[sideToMove] > rule.nPiecesAtLeast ||
-        !rule.allowFlyWhenRemainThreePieces) {
+    if (pieceCountOnBoard[sideToMove] > rule->nPiecesAtLeast ||
+        !rule->allowFlyWhenRemainThreePieces) {
         Square moveSquare;
         for (MoveDirection d = MD_BEGIN; d < MD_NB; d = (MoveDirection)(d + 1)) {
             moveSquare = static_cast<Square>(MoveList<LEGAL>::moveTable[s][d]);
@@ -1789,8 +1790,8 @@ bool Position::is_all_surrounded() const
         return true;
 
     // Can fly
-    if (pieceCountOnBoard[sideToMove] <= rule.nPiecesAtLeast &&
-        rule.allowFlyWhenRemainThreePieces) {
+    if (pieceCountOnBoard[sideToMove] <= rule->nPiecesAtLeast &&
+        rule->allowFlyWhenRemainThreePieces) {
         return false;
     }
 
@@ -1814,7 +1815,7 @@ bool Position::is_all_surrounded() const
 
 bool Position::is_star_square(Square s)
 {
-    if (rule.nTotalPiecesEachSide == 12) {
+    if (rule->nTotalPiecesEachSide == 12) {
         return (s == 17 ||
                 s == 19 ||
                 s == 21 ||
@@ -1829,7 +1830,7 @@ bool Position::is_star_square(Square s)
 
 void Position::print_board()
 {
-    if (rule.nTotalPiecesEachSide == 12) {
+    if (rule->nTotalPiecesEachSide == 12) {
         printf("\n"
                     "31 ----- 24 ----- 25\n"
                     "| \\       |      / |\n"

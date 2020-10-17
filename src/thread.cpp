@@ -26,7 +26,6 @@
 #include "search.h"
 #include "thread.h"
 #include "uci.h"
-#include "syzygy/tbprobe.h"
 #include "tt.h"
 
 ThreadPool Threads; // Global object
@@ -67,6 +66,7 @@ int Thread::best_move_count(Move move) const
 
 void Thread::clear()
 {
+    // TODO
     return;
 }
 

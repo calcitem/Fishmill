@@ -38,7 +38,7 @@
 struct StateInfo
 {
     // Copied when making a move
-    int    rule50;
+    int    rule50 {0};
     int    pliesFromNull;
 
     // Not copied when making a move (will be recomputed anyhow)
@@ -132,12 +132,18 @@ public:
 
     int set_position(const struct Rule *rule);
 
+    time_t get_elapsed_time(int us);
+    time_t start_timeb() const;
+    void set_start_time(int stimeb);
+
     Piece *get_board() const;
     Square current_square() const;
     int get_step() const;
     enum Phase get_phase() const;
     enum Action get_action() const;
     const char *cmd_line() const;
+
+    int get_mobility_diff(bool includeFobidden);
 
     bool reset();
     bool start();
@@ -175,6 +181,7 @@ public:
 
     int pieces_count_on_board(Color c);
     int pieces_count_in_hand(Color c);
+
     int piece_count_need_remove();
 
     static bool is_star_square(Square s);
@@ -204,13 +211,13 @@ private:
     int pieceCountNeedRemove { 0 };
     Square pieceList[PIECE_NB][16];     // TODO
     int index[SQUARE_NB];
-    int gamePly;
-    Color sideToMove;
+    int gamePly { 0 };
+    Color sideToMove { NOCOLOR };
     Score psq;
     Thread *thisThread;
     StateInfo *st;
 
-/// Mill Game
+    /// Mill Game
     Color them { NOCOLOR };
     Color winner;
     GameOverReason gameoverReason { NO_REASON };
@@ -355,7 +362,7 @@ inline Key Position::key() const
 
 inline void Position::construct_key()
 {
-    //st->key = 0;  // TODO
+    st->key = 0;
 }
 
 inline int Position::game_ply() const
@@ -444,6 +451,16 @@ inline enum Phase Position::get_phase() const
 inline enum Action Position::get_action() const
 {
     return action;
+}
+
+inline time_t Position::start_timeb() const
+{
+    return startTime;
+}
+
+inline void Position::set_start_time(int stimeb)
+{
+    startTime = stimeb;
 }
 
 inline int Position::pieces_count_on_board(Color c)

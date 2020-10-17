@@ -1349,7 +1349,7 @@ void Tablebases::init(const std::string &paths)
     for (auto p : bothOnDiagonal)
         MapKK[p.first][p.second] = code++;
 
-    // Binomial[] stores the Binomial Coefficents using Pascal rule. There
+    // Binomial[] stores the Binomial Coefficents using Pascal rule-> There
     // are Binomial[k][n] ways to choose k elements from a set of n elements.
     Binomial[0][0] = 1;
 
@@ -1462,7 +1462,7 @@ WDLScore Tablebases::probe_wdl(Position &pos, ProbeState *result)
 // The return value n can be off by 1: a return value -n can mean a loss
 // in n+1 ply and a return value +n can mean a win in n+1 ply. This
 // cannot happen for tables with positions exactly on the "edge" of
-// the 50-move rule.
+// the 50-move rule->
 //
 // This implies that if dtz > 0 is returned, the position is certainly
 // a win if dtz + 50-move-counter <= 99. Care must be taken that the engine

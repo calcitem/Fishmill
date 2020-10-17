@@ -31,7 +31,6 @@ struct Rule
     bool hasObliqueLines;
     bool hasBannedLocations;
     bool isDefenderMoveFirst;
-    bool allowRemovePiecesRepeatedlyWhenCloseSameMill;
     bool allowRemoveMultiPiecesWhenCloseMultiMill;
     bool allowRemovePieceInMill;
     bool isBlackLosebutNotDrawWhenBoardFull;
@@ -40,9 +39,9 @@ struct Rule
     int maxStepsLedToDraw;
 };
 
-#define N_RULES 5
+#define N_RULES 4
 extern const struct Rule RULES[N_RULES];
-extern struct Rule rule;
+extern const struct Rule *rule;
 
 #endif /* RULE_H */
 

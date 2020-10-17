@@ -33,6 +33,7 @@
 const std::string engine_info(bool to_uci = false);
 const std::string compiler_info();
 void prefetch(void *addr);
+void prefetch_range(void *addr, size_t len);
 void start_logger(const std::string &fname);
 void *aligned_ttmem_alloc(size_t size, void *&mem);
 
@@ -105,7 +106,6 @@ class PRNG
 
     uint64_t rand64()
     {
-
         s ^= s >> 12, s ^= s << 25, s ^= s >> 27;
         return s * 2685821657736338717LL;
     }

@@ -30,6 +30,11 @@
 #include "position.h"
 #include "types.h"
 
+class Position;
+struct ExtMove;
+
+void partial_insertion_sort(ExtMove *begin, ExtMove *end, int limit);
+
 
 /// StatsEntry stores the stat table value. It is usually a number but could
 /// be a move or even a nested history. We use a class instead of naked value
@@ -156,13 +161,14 @@ public:
                int);
     Move next_move(bool skipQuiets = false);
 
-private:
+//private:
     template<PickType T, typename Pred> Move select(Pred);
     template<GenType> void score();
     ExtMove *begin()
     {
         return cur;
     }
+
     ExtMove *end()
     {
         return endMoves;
@@ -180,7 +186,7 @@ private:
     Value threshold;
     Depth depth;
     int ply;
-    ExtMove moves[MAX_MOVES];
+    ExtMove moves[MAX_MOVES] { MOVE_NONE };
 
     int moveCount{ 0 };
 
@@ -188,6 +194,17 @@ private:
     {
         return moveCount;
     }
+
+#ifdef HOSTORY_HEURISTIC
+    // TODO: Fix size
+    Score placeHistory[64];
+    Score removeHistory[64];
+    Score moveHistory[10240];
+
+    Score getHistoryScore(Move move);
+    void setHistoryScore(Move move, Depth depth);
+    void clearHistoryScore();
+#endif // HOSTORY_HEURISTIC
 };
 
 #endif // #ifndef MOVEPICK_H_INCLUDED

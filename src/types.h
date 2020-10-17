@@ -22,6 +22,8 @@
 #ifndef TYPES_H_INCLUDED
 #define TYPES_H_INCLUDED
 
+//#include "config.h"
+
 /// When compiling with provided Makefile (e.g. for Linux and OSX), configuration
 /// is done automatically. To get started type 'make help'.
 ///
@@ -299,7 +301,6 @@ typedef int Depth;
 
 enum : int
 {
-
     DEPTH_QS_CHECKS = 0,
     DEPTH_QS_NO_CHECKS = -1,
     DEPTH_QS_RECAPTURES = -5,
