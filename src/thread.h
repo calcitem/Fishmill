@@ -45,6 +45,9 @@
 /// to care about someone changing the entry under our feet.
 
 class Thread
+#ifdef QT_UI
+    : public QObject
+#endif
 {
     std::mutex mutex;
     std::condition_variable cv;
@@ -53,7 +56,11 @@ class Thread
     NativeThread stdThread;
 
 public:
-    explicit Thread(size_t);
+    explicit Thread(size_t n
+#ifdef QT_UI
+                    , QObject *parent = nullptr
+#endif
+    );
     virtual ~Thread();
     virtual void search();
     void clear();

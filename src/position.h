@@ -362,7 +362,7 @@ inline Key Position::key() const
 
 inline void Position::construct_key()
 {
-    st->key = 0;
+    //st->key = 0;
 }
 
 inline int Position::game_ply() const
